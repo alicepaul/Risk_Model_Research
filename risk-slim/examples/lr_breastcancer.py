@@ -43,12 +43,13 @@ coef_l1_df.rename(columns = {0:'Features'}, inplace = True)
 coef_l1_df.loc[-1] = ('Intercept', lr1.intercept_.transpose())
 coef_l1_df.index = coef_l1_df.index + 1  # shifting index
 coef_l1_df.sort_index(inplace=True) 
+coef_l1_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr1_breastcancer_unrounded.csv')
 
 coef_l1_df['Coefs'] = coef_l1_df['Coefs'].astype(float).round(0)
 print(coef_l1_df)
-coef_l1_df.to_csv('/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/results/lr1_breastcancer.csv')
+coef_l1_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr1_breastcancer.csv')
 filter_coef_l1 = coef_l1_df[(coef_l1_df['Coefs'] != 0.0) & (coef_l1_df['Coefs'] !=-0.0) ]
-filter_coef_l1.to_csv('/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/results/filter_lr1_breastcancer.csv')
+filter_coef_l1.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr1_breastcancer.csv')
 
 print('----------------------l2 coef below-----------------------------------------')
 coef_l2_df = pd.DataFrame(list(X.columns)).copy()
@@ -57,9 +58,10 @@ coef_l2_df.rename(columns = {0:'Features'}, inplace = True)
 coef_l2_df.loc[-1] = ['Intercept', lr2.intercept_.transpose()]
 coef_l2_df.index = coef_l2_df.index + 1  # shifting index
 coef_l2_df.sort_index(inplace=True) 
+coef_l2_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr2_breastcancer_unrounded.csv')
 
 coef_l2_df['Coefs'] = coef_l2_df['Coefs'].astype(float).round(0)
 print(coef_l2_df)
-coef_l2_df.to_csv('/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/results/lr2_breastcancer.csv')
+coef_l2_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr2_breastcancer.csv')
 filter_coef_l2 = coef_l2_df[(coef_l2_df['Coefs'] != 0.0) & (coef_l2_df['Coefs'] !=-0.0) ]
-filter_coef_l2.to_csv('/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/results/filter_lr2_breastcancer.csv')
+filter_coef_l2.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr2_breastcancer.csv')

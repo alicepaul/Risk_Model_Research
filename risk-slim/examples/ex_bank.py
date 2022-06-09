@@ -68,6 +68,6 @@ pprint.pprint(model_info)
 
 # Write to file
 s = model_info
-f = open (r'/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/results/cpa_bank.txt','w')
+f = open (r'/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_bank.txt','w')
 print (s,file = f)
 f.close()
