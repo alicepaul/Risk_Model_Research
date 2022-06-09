@@ -1,0 +1,11 @@
+,Features,Coefs
+0,Intercept,-8.0
+1,Clump Thickness,0.0
+2,Uniformity of Cell Size,0.0
+3,Uniformity of Cell Shape,0.0
+4,Marginal Adhesion,0.0
+5,Single Epithelial Cell Size,0.0
+6,Bare Nuclei,0.0
+7,Bland Chromatin,0.0
+8,Normal Nucleoli,0.0
+9,Mitoses,0.0
