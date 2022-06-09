@@ -1,0 +1,11 @@
+,Features,Coefs
+0,Intercept,[-8.47175301]
+1,Clump Thickness,0.42650913886281305
+2,Uniformity of Cell Size,0.052854066347256035
+3,Uniformity of Cell Shape,0.30175347014044207
+4,Marginal Adhesion,0.26150597748323057
+5,Single Epithelial Cell Size,0.048480860010251293
+6,Bare Nuclei,0.36458815347894175
+7,Bland Chromatin,0.3438669693463408
+8,Normal Nucleoli,0.19686539161718328
+9,Mitoses,0.3292976327646619

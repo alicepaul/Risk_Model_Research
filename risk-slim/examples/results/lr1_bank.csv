@@ -1,5 +1,5 @@
 ,Features,Coefs
-0,Intercept,-1.0
+0,Intercept,-0.0
 1,age_lt_25,0.0
 2,age_25_to_30,-0.0
 3,age_30_to_40,-0.0
@@ -35,7 +35,7 @@
 33,call_in_Q3,-0.0
 34,call_in_Q4,0.0
 35,call_on_mon,-0.0
-36,call_on_tue,0.0
+36,call_on_tue,-0.0
 37,call_on_wed,0.0
 38,call_on_thu,0.0
 39,call_on_fri,-0.0
@@ -54,6 +54,6 @@
 52,cons_conf_idx_leq_n40,-0.0
 53,euribor3m_geq_100,-0.0
 54,euribor3m_geq_200,-0.0
-55,euribor3m_geq_300,-0.0
+55,euribor3m_geq_300,-1.0
 56,euribor3m_geq_400,-0.0
 57,euribor3m_geq_500,2.0
