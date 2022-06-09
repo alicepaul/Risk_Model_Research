@@ -1,0 +1,32 @@
+06-08-2022 07:30:12 PM | INFO     | running 'train_risk_slim.py'
+06-08-2022 07:30:12 PM | INFO     | working directory: '/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim'
+06-08-2022 07:30:12 PM | INFO     | parsed the following variables:
+-c0_value : 1e-06
+-cvindices : /Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/data/breastcancer_cvindices.csv
+-data : /Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/examples/data/breastcancer_data.csv
+-fold : 0
+-log : /Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/batch/logs/breastcancer_fold_0_06_08_2022_19_30_08.log
+-max_coef : 5
+-max_offset : -1
+-max_size : 5
+-results : /Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/batch/results/breastcancer_fold_0_results.p
+-settings : /Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/batch/results/breastcancer_fold_0_settings.json
+-silent : False
+-timelimit : 60
+-w_pos : 1.0
+-weights : None
+
+06-08-2022 07:30:12 PM | INFO     | loading data and sample weights
+06-08-2022 07:30:12 PM | INFO     | creating coefficient set and constraints
+06-08-2022 07:30:19 PM | INFO     | saving results...
+06-08-2022 07:30:19 PM | INFO     | saved results as pickle file: '/Users/zhaotongtong/Desktop/Summer_Research_2022/risk-slim/batch/results/breastcancer_fold_0_results.p'
+06-08-2022 07:30:19 PM | INFO     | to access results, use this snippet:
+
+                			    import pickle
+                			    f = open(results_file, 'rb')
+                			    results = pickle.load(f)
+                
+06-08-2022 07:30:19 PM | INFO     | finished training
+06-08-2022 07:30:19 PM | INFO     | quitting
+
+
