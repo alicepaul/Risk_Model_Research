@@ -1,7 +1,0 @@
-,Features,Coefs
-0,Intercept,-0.0
-31,call_in_Q1,1.0
-32,call_in_Q2,-1.0
-42,called_before,1.0
-51,cons_price_idx_geq_93_5,1.0
-57,euribor3m_geq_500,2.0

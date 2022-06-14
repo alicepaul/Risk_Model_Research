@@ -2,7 +2,7 @@ import os
 import pprint
 import numpy as np
 import riskslim
-
+import pandas as pd
 # data
 data_name = "bank"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
@@ -19,6 +19,10 @@ c0_value = 1e-6                                             # L0-penalty paramet
 
 # load data from disk
 data = riskslim.load_data_from_csv(dataset_csv_file = data_csv_file, sample_weights_csv_file = sample_weights_csv_file)
+
+df = pd.read_csv(data_csv_file)
+print('SHAPE is',df.shape)
+
 
 # create coefficient set and set the value of the offset parameter
 coef_set = riskslim.CoefficientSet(variable_names = data['variable_names'], lb = -max_coefficient, ub = max_coefficient, sign = 0)
@@ -67,7 +71,9 @@ riskslim.print_model(model_info['solution'], data)
 pprint.pprint(model_info)
 
 # Write to file
-s = model_info
-f = open (r'/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_bank.txt','w')
-print (s,file = f)
-f.close()
+model_result = pd.DataFrame(list(df.columns)).copy()
+model_result.insert(len(model_result.columns),"Coefs",model_info['solution'])
+model_result.rename(columns = {0:'Features'}, inplace = True)
+model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_bank.csv')
+filter_model_result = model_result[(model_result['Coefs'] != 0.0) & (model_result['Coefs'] !=-0.0) ]
+filter_model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_cpa_bank.csv')

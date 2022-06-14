@@ -3,7 +3,11 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import classification_report
 import os
+
 
 
 
@@ -22,43 +26,54 @@ print(data.shape)
 #define target variable
 X = data.iloc[:,1:58]
 y = data.iloc[:,[0]]
-
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=42)
 
 #regression model
-lr1 = LogisticRegression(penalty="l1",solver="liblinear",C=0.8,max_iter=1000)
-lr1.fit(X,y)
+lr = LogisticRegression(penalty="none",solver="lbfgs",C=0.8,max_iter=1000).fit(X_train, y_train)
+y_pred_prob = lr.predict_proba(X_test)[::,1]
+y_pred = lr.predict(X_test)
 
-lr2 = LogisticRegression(penalty="l2",solver="lbfgs",C=0.8,max_iter=1000)
-lr2.fit(X,y)
+# accuracy, f1
+report = classification_report(y_test, y_pred)
+print(classification_report(y_test, y_pred))
+auc = roc_auc_score(y_test, y_pred_prob)
+print('auc', auc)
+
+#specificity, sensitivity
+cm = confusion_matrix(y_test, y_pred)
+print('Confusion Matrix : \n', cm)
+
+total=sum(sum(cm))
+#####from confusion matrix calculate accuracy
+accuracy=(cm[0,0]+cm[1,1])/total
+print ('Accuracy : ', accuracy)
+
+sensitivity = cm[0,0]/(cm[0,0]+cm[0,1])
+print('Sensitivity : ', sensitivity)
+
+specificity = cm[1,1]/(cm[1,0]+cm[1,1])
+print('Specificity : ', specificity)
 
 
 # save coef
-coef_l1_df = pd.DataFrame(list(X.columns)).copy()
-coef_l1_df.insert(len(coef_l1_df.columns),"Coefs",lr1.coef_.transpose())
-coef_l1_df.rename(columns = {0:'Features'}, inplace = True)
-coef_l1_df.loc[-1] = ('Intercept', lr1.intercept_.transpose())
-coef_l1_df.index = coef_l1_df.index + 1  # shifting index
-coef_l1_df.sort_index(inplace=True) 
-coef_l1_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr1_spam_unrounded.csv')
+coef_lr_df = pd.DataFrame(list(X.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr.coef_.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+coef_lr_df.loc[-1] = ('Intercept', lr.intercept_.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+coef_lr_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr_spam_unrounded.csv')
+print('----------------- Coef unrounded -------------')
+print(coef_lr_df)
 
-coef_l1_df['Coefs'] = coef_l1_df['Coefs'].astype(float).round(0)
-print(coef_l1_df)
-coef_l1_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr1_spam.csv')
-filter_coef_l1 = coef_l1_df[(coef_l1_df['Coefs'] != 0.0) & (coef_l1_df['Coefs'] !=-0.0) ]
-filter_coef_l1.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr1_spam.csv')
-# print((lrl1.coef_ != 0).sum(axis=1))
-
-print('----------------------l2 coef below-----------------------------------------')
-coef_l2_df = pd.DataFrame(list(X.columns)).copy()
-coef_l2_df.insert(len(coef_l2_df.columns),"Coefs",lr2.coef_.transpose())
-coef_l2_df.rename(columns = {0:'Features'}, inplace = True)
-coef_l2_df.loc[-1] = ['Intercept', lr2.intercept_.transpose()]
-coef_l2_df.index = coef_l2_df.index + 1  # shifting index
-coef_l2_df.sort_index(inplace=True) 
-coef_l2_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr2_spam_unrounded.csv')
-
-coef_l2_df['Coefs'] = coef_l2_df['Coefs'].astype(float).round(0)
-print(coef_l2_df)
-coef_l2_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr2_spam.csv')
-filter_coef_l2 = coef_l1_df[(coef_l2_df['Coefs'] != 0.0) & (coef_l2_df['Coefs'] !=-0.0) ]
-filter_coef_l2.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr2_spam.csv')
+coef_lr_df['Coefs'] = coef_lr_df['Coefs'].astype(float)
+coef_lr_df['Coefs'].loc[1:57] = (coef_lr_df['Coefs'].loc[1:57] * 2).round(0)
+print('----------------- Coef * 2 rounded -------------')
+print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_spam.csv')

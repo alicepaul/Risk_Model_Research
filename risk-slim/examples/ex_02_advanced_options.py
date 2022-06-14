@@ -4,11 +4,10 @@ import pprint
 import riskslim
 
 # data
-data_name = "breastcancer"                                  # name of the data
+data_name = "bank"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
 data_csv_file = data_dir + data_name + '_data.csv'          # csv file for the dataset
-#sample_weights_csv_file = data_dir + data_name + '_weights.csv'                              # csv file of sample weights for the dataset (optional)
-sample_weights_csv_file = None
+sample_weights_csv_file = None                              # csv file of sample weights for the dataset (optional)
 
 # problem parameters
 max_coefficient = 5                                         # value of largest/smallest coefficient
@@ -84,15 +83,15 @@ settings = {
     #
     'init_use_rounding': True,                          # use Rd in initialization procedure
     'init_rounding_max_runtime': 30.0,                  # max runtime for Rd in initialization procedure
-    'init_rounding_max_solutions': 5,                   # max solutions to round using Rd
+    'init_rounding_max_solutions': 15,                   # max solutions to round using Rd
     #
     'init_use_sequential_rounding': True,               # use SeqRd in initialization procedure
     'init_sequential_rounding_max_runtime': 10.0,       # max runtime for SeqRd in initialization procedure
-    'init_sequential_rounding_max_solutions': 5,        # max solutions to round using SeqRd
+    'init_sequential_rounding_max_solutions': 15,        # max solutions to round using SeqRd
     #
     'init_polishing_after': True,                       # polish after rounding
     'init_polishing_max_runtime': 30.0,                 # max runtime for polishing
-    'init_polishing_max_solutions': 5,                  # max solutions to polish
+    'init_polishing_max_solutions': 15,                  # max solutions to polish
     #
     # CPLEX Solver Parameters
     'cplex_randomseed': 0,                              # random seed
@@ -107,11 +106,11 @@ pprint.pprint(model_info)
 riskslim.print_model(model_info['solution'], data)
 
 # mip_output contains information to access the MIP
-#mip_info['risk_slim_mip'] #CPLEX mip
-#mip_info['risk_slim_idx'] #indices of the relevant constraints
+mip_info['risk_slim_mip'] #CPLEX mip
+mip_info['risk_slim_idx'] #indices of the relevant constraints
 
 # lcpa_output contains detailed information about LCPA
-#pprint.pprint(lcpa_info)
+pprint.pprint(lcpa_info)
 
 
 
