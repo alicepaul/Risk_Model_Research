@@ -10,7 +10,6 @@ import os
 
 
 
-
 #data
 data_name = "tbrisk"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
