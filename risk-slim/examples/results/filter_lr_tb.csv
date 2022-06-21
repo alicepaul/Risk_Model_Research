@@ -1,0 +1,11 @@
+,Features,Coefs
+0,Intercept,0.0711666237780333
+1,female,-2.0
+2,hiv_neg,-2.0
+3,diabetes,1.0
+4,ever_smoke,-1.0
+6,num_symptoms,1.0
+7,Accuracy,1.0
+8,Sensitivity,2.0
+9,Specificity,1.0
+10,AUC,2.0

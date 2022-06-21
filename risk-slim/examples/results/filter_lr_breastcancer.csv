@@ -1,0 +1,12 @@
+,Features,Coefs
+0,Intercept,-9.858229678915311
+1,Clump Thickness,1.0
+3,Uniformity of Cell Shape,1.0
+4,Marginal Adhesion,1.0
+6,Bare Nuclei,1.0
+7,Bland Chromatin,1.0
+9,Mitoses,1.0
+10,Accuracy,0.9562043795620438
+11,Sensitivity,0.9873417721518988
+12,Specificity,0.9137931034482759
+13,AUC,0.9978175469227412

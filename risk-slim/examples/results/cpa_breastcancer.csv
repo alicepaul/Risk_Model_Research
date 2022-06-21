@@ -1,0 +1,11 @@
+,Features,Coefs
+0,Benign,-17.0
+1,ClumpThickness,1.0
+2,UniformityOfCellSize,0.0
+3,UniformityOfCellShape,0.0
+4,MarginalAdhesion,1.0
+5,SingleEpithelialCellSize,0.0
+6,BareNuclei,1.0
+7,BlandChromatin,1.0
+8,NormalNucleoli,0.0
+9,Mitoses,1.0
