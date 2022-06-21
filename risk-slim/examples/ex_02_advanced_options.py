@@ -4,14 +4,14 @@ import pprint
 import riskslim
 
 # data
-data_name = "bank"                                  # name of the data
+data_name = "breastcancer"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
 data_csv_file = data_dir + data_name + '_data.csv'          # csv file for the dataset
 sample_weights_csv_file = None                              # csv file of sample weights for the dataset (optional)
 
 # problem parameters
 max_coefficient = 5                                         # value of largest/smallest coefficient
-max_L0_value = 5                                            # maximum model size
+max_L0_value = 10                                            # maximum model size
 max_offset = 50                                             # maximum value of offset parameter (optional)
 c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models; we set to a small value (1e-6) so that we get a model with max_L0_value terms
 w_pos = 1.00                                                # relative weight on examples with y = +1; w_neg = 1.00 (optional)

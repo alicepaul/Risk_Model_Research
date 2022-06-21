@@ -5,24 +5,26 @@ import riskslim
 import pandas as pd
 
 # data
-data_name = "spambase"                                  # name of the data
+data_name = "tbrisk"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
 data_csv_file = data_dir + data_name + '_data.csv'          # csv file for the dataset
 sample_weights_csv_file = None                              # csv file of sample weights for the dataset (optional)
 
 # problem parameters
 max_coefficient = 5                                         # value of largest/smallest coefficient
-max_L0_value = 50                                            # maximum model size (set as float(inf))
+max_L0_value = 7                                            # maximum model size (set as float(inf))
 max_offset = 50                                             # maximum value of offset paramete(optional)
 
 c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models; we set to a small value (1e-6) so that we get a model with max_L0_value terms
 
+df = pd.read_csv(data_csv_file)
 
 # load data from disk
 data = riskslim.load_data_from_csv(dataset_csv_file = data_csv_file, sample_weights_csv_file = sample_weights_csv_file)
 
 df = pd.read_csv(data_csv_file)
 print('SHAPE is',df.shape)
+
 
 # create coefficient set and set the value of the offset parameter
 coef_set = riskslim.CoefficientSet(variable_names = data['variable_names'], lb = -max_coefficient, ub = max_coefficient, sign = 0)
@@ -74,9 +76,9 @@ pprint.pprint(model_info)
 model_result = pd.DataFrame(list(df.columns)).copy()
 model_result.insert(len(model_result.columns),"Coefs",model_info['solution'])
 model_result.rename(columns = {0:'Features'}, inplace = True)
-model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_spam.csv')
+model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_tb.csv')
 filter_model_result = model_result[(model_result['Coefs'] != 0.0) & (model_result['Coefs'] !=-0.0) ]
-filter_model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_cpa_spam.csv')
+filter_model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_cpa_tb.csv')
 with pd.ExcelWriter('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare.xlsx',
                     mode='a') as writer:  
-    filter_model_result.to_excel(writer, sheet_name='filter_cpa_spam') 
+    filter_model_result.to_excel(writer, sheet_name='filter_cpa_tb') 

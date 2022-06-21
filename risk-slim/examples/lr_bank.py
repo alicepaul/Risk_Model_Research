@@ -28,7 +28,7 @@ y = data.iloc[:,[0]]
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=42)
 
 #regression model
-lr = LogisticRegression(penalty="none",solver="lbfgs",C=0.8,max_iter=1000).fit(X_train, y_train)
+lr = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000).fit(X_train, y_train)
 y_pred_prob = lr.predict_proba(X_test)[::,1]
 y_pred = lr.predict(X_test)
 
@@ -75,3 +75,6 @@ print('----------------- Coef * 2 rounded -------------')
 print(coef_lr_df)
 filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
 filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_bank.csv')
+with pd.ExcelWriter('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare.xlsx',
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='filter_lr_bank') 

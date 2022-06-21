@@ -12,19 +12,20 @@ import os
 
 
 #data
-data_name = "spambase"                                  # name of the data
+data_name = "tbrisk"                                  # name of the data
 data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
 data_csv_file = data_dir + data_name + '_data.csv'
 data = pd.read_csv(data_csv_file)
 
 #data cleaning
-data = data.replace(to_replace='?',value=np.nan)    
-data = data.dropna(how='any')      
-
-print(data.shape)
+data = data.replace(to_replace='NA',value=np.nan)    
+data = data.dropna(how='any')
+# data['tb'] = np.where(data['tb']==2, 0, data['tb'])
+# data = data.drop(['age_group'], axis=1)
+# data.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/data/tbrisk_data.csv',index=False)
 
 #define target variable
-X = data.iloc[:,1:58]
+X = data.iloc[:,1:7]
 y = data.iloc[:,[0]]
 X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=42)
 
@@ -67,7 +68,7 @@ listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
 coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
-coef_lr_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr_spam_unrounded.csv')
+coef_lr_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr_tb_unrounded.csv')
 print('----------------- Coef unrounded -------------')
 print(coef_lr_df)
 
@@ -76,7 +77,7 @@ coef_lr_df['Coefs'].loc[1:57] = (coef_lr_df['Coefs'].loc[1:57] * 2).round(0)
 print('----------------- Coef * 2 rounded -------------')
 print(coef_lr_df)
 filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
-filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_spam.csv')
+filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_tb.csv')
 with pd.ExcelWriter('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare.xlsx',
                     mode='a') as writer:  
-    filter_coef_lr.to_excel(writer, sheet_name='filter_lr_spam') 
+    filter_coef_lr.to_excel(writer, sheet_name='filter_lr_tb') 

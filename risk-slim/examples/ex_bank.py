@@ -11,10 +11,10 @@ sample_weights_csv_file = None                              # csv file of sample
 
 # problem parameters
 max_coefficient = 5                                         # value of largest/smallest coefficient
-max_L0_value = 5                                            # maximum model size (set as float(inf))
+max_L0_value = 57                                          # maximum model size (set as float(inf))
 max_offset = 50                                             # maximum value of offset paramete(optional)
 
-c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models; we set to a small value (1e-6) so that we get a model with max_L0_value terms
+c0_value = 1e-12                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models; we set to a small value (1e-6) so that we get a model with max_L0_value terms
 
 
 # load data from disk
@@ -77,3 +77,6 @@ model_result.rename(columns = {0:'Features'}, inplace = True)
 model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/cpa_bank.csv')
 filter_model_result = model_result[(model_result['Coefs'] != 0.0) & (model_result['Coefs'] !=-0.0) ]
 filter_model_result.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_cpa_bank.csv')
+with pd.ExcelWriter('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare.xlsx',
+                    mode='a') as writer:  
+    filter_model_result.to_excel(writer, sheet_name='filter_cpa_bank') 
