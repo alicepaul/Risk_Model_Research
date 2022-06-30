@@ -72,7 +72,7 @@ print('----------------- Coef unrounded -------------')
 print(coef_lr_df)
 
 coef_lr_df['Coefs'] = coef_lr_df['Coefs'].astype(float)
-coef_lr_df['Coefs'].loc[1:57] = (coef_lr_df['Coefs'].loc[1:57] * 2).round(0)
+coef_lr_df['Coefs'].loc[1:7] = (coef_lr_df['Coefs'].loc[1:7] * 2).round(0)
 print('----------------- Coef * 2 rounded -------------')
 print(coef_lr_df)
 filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]

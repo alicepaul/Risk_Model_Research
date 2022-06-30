@@ -1,3 +1,4 @@
+
 library(dplyr)
 
 simulate_data <- function(n, p1, p2){
@@ -44,4 +45,7 @@ gen_data <- function(n, p1, p2, filename){
 }
 
 # Example of generating data and saving
-gen_data(10000, 23, 18, "simu")
+for (i in 1:10){
+  gen_data(1000, 50, 50, paste0("simulate50_", i))
+}
+
