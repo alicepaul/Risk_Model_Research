@@ -1,7 +1,11 @@
 ,Features,Coefs
-0,Benign,-17.0
-1,ClumpThickness,1.0
-4,MarginalAdhesion,1.0
-6,BareNuclei,1.0
-7,BlandChromatin,1.0
-9,Mitoses,1.0
+0,tb,-1.0
+1,female,-1.0
+2,hiv_neg,-1.0
+3,diabetes,1.0
+4,num_symptoms,1.0
+5,age_2535,1.0
+6,Accuracy,0.6889383815887157
+7,Sensitivity,0.5854383358098069
+8,Specificity,0.7922848664688428
+9,AUC,0.7723169210012302

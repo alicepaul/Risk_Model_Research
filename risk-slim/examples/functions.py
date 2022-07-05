@@ -85,51 +85,16 @@ def LR_read_data(data_name):
     data_dir = os.getcwd() + '/examples/data/'                  # directory where datasets are stored
     data_csv_file = data_dir + data_name + '_data.csv'          # csv file for the dataset
     sample_weights_csv_file = None                              # csv file of sample weights for the dataset (optional)
+    df = pd.read_csv(data_csv_file)
 
+    #define target variable
+    X = df.iloc[:,1:]
+    y = df.iloc[:,[0]]
 
     data = riskslim.load_data_from_csv(dataset_csv_file = data_csv_file, sample_weights_csv_file = sample_weights_csv_file)
-    
-    return data['X'], data['Y'], data['variable_names']
-# #--------------------- sample preprocess ---------------
+    return data['X'], data['Y'], data['variable_names'], df
 
-
-X_breast, Y_breast, names_breast = LR_read_data('breastcancer')
-X_spam, Y_spam, names_spam = LR_read_data('spam')
-X_bank, Y_bank, names_bank = LR_read_data('bank')
-X_tbrisk_cpa, Y_tbrisk_cpa, names_tbrisk_cpa = LR_read_data('tbrisk_cpa')
-X_sim5_1, Y_sim5_1, names_sim5_1 = LR_read_data('simulate5_1_data')
-X_sim5_2, Y_sim5_2, names_sim5_2 = LR_read_data('simulate5_2_data')
-X_sim5_3, Y_sim5_3, names_sim5_3 = LR_read_data('simulate5_3_data')
-X_sim5_4, Y_sim5_4, names_sim5_4 = LR_read_data('simulate5_4_data')
-X_sim5_5, Y_sim5_5, names_sim5_5 = LR_read_data('simulate5_5_data')
-X_sim5_6, Y_sim5_6, names_sim5_6 = LR_read_data('simulate5_6_data')
-X_sim5_7, Y_sim5_7, names_sim5_7 = LR_read_data('simulate5_7_data')
-X_sim5_8, Y_sim5_8, names_sim5_8 = LR_read_data('simulate5_8_data')
-X_sim5_9, Y_sim5_9, names_sim5_9 = LR_read_data('simulate5_9_data')
-X_sim5_10, Y_sim5_10, names_sim5_10 = LR_read_data('simulate5_10_data')
-X_sim10_1, Y_sim10_1, names_sim10_1 = LR_read_data('simulate10_1_data')
-X_sim10_2, Y_sim10_2, names_sim10_2 = LR_read_data('simulate10_2_data')
-X_sim10_3, Y_sim10_3, names_sim10_3 = LR_read_data('simulate10_3_data')
-X_sim10_4, Y_sim10_4, names_sim10_4 = LR_read_data('simulate10_4_data')
-X_sim10_5, Y_sim10_5, names_sim10_5 = LR_read_data('simulate10_5_data')
-X_sim10_6, Y_sim10_6, names_sim10_6 = LR_read_data('simulate10_6_data')
-X_sim10_7, Y_sim10_7, names_sim10_7 = LR_read_data('simulate10_7_data')
-X_sim10_8, Y_sim10_8, names_sim10_8 = LR_read_data('simulate10_8_data')
-X_sim10_9, Y_sim10_9, names_sim10_9 = LR_read_data('simulate10_9_data')
-X_sim10_10, Y_sim10_10, names_sim10_10 = LR_read_data('simulate10_10_data')
-X_sim50_1, Y_sim50_1, names_sim50_1 = LR_read_data('simulate50_1_data')
-X_sim50_2, Y_sim50_2, names_sim50_2 = LR_read_data('simulate50_2_data')
-X_sim50_3, Y_sim50_3, names_sim50_3 = LR_read_data('simulate50_3_data')
-X_sim50_4, Y_sim50_4, names_sim50_4 = LR_read_data('simulate50_4_data')
-X_sim50_5, Y_sim50_5, names_sim50_5 = LR_read_data('simulate50_5_data')
-X_sim50_6, Y_sim50_6, names_sim50_6 = LR_read_data('simulate50_6_data')
-X_sim50_7, Y_sim50_7, names_sim50_7 = LR_read_data('simulate50_7_data')
-X_sim50_8, Y_sim50_8, names_sim50_8 = LR_read_data('simulate50_8_data')
-X_sim50_9, Y_sim50_9, names_sim50_9 = LR_read_data('simulate50_9_data')
-X_sim50_10, Y_sim50_10, names_sim50_10 = LR_read_data('simulate50_10_data')
-
-
-# #------------ LR function returns 2 coefs vectors --------------
+#------------ LR function returns 2 coefs vectors --------------
 
 def LR_func(X,Y):
     X_train,X_test,y_train,y_test = train_test_split(X,Y,test_size=0.2,random_state=42)
@@ -138,6 +103,7 @@ def LR_func(X,Y):
     lr = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000).fit(X_train, y_train)
     y_pred_prob = lr.predict_proba(X_test)[::,1]
     y_pred = lr.predict(X_test)
+
 
     #coef with round to nearest integer, alpha=1
     alpha = 1
@@ -166,21 +132,533 @@ def LR_func(X,Y):
     specificity = cm[1,1]/(cm[1,0]+cm[1,1])
     # print('Specificity : ', specificity)
 
-    return lr_coef, coef_round, lr_int, y_pred_prob, y_pred_prob, auc, accuracy, sensitivity, specificity
+    return lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity
 
 
-#---------sample LR ---------------
-lr_coef_, coef_round, lr_int, y_pred_prob, y_pred_prob, _, _, _, _= LR_func(X_breast, Y_breast)
+#------------------ 34 datasets result computation ----------------------
+# #--------------------- sample preprocess ---------------
 
-for i in len(list_X):
+# X_breast, Y_breast, names_breast, df_breast = LR_read_data('breastcancer')
+# X_spam, Y_spam, names_spam, df_spam = LR_read_data('spambase')
+# X_bank, Y_bank, names_bank, df_bank = LR_read_data('bank')
+# X_tbrisk_cpa, Y_tbrisk_cpa, names_tbrisk_cpa, df_tb = LR_read_data('tbrisk_cpa')
+# X_sim5_1, Y_sim5_1, names_sim5_1, df_5_1 = LR_read_data('simulate5_1')
+# X_sim5_2, Y_sim5_2, names_sim5_2, df_5_2 = LR_read_data('simulate5_2')
+# X_sim5_3, Y_sim5_3, names_sim5_3, df_5_3 = LR_read_data('simulate5_3')
+# X_sim5_4, Y_sim5_4, names_sim5_4, df_5_4 = LR_read_data('simulate5_4')
+# X_sim5_5, Y_sim5_5, names_sim5_5, df_5_5= LR_read_data('simulate5_5')
+# X_sim5_6, Y_sim5_6, names_sim5_6, df_5_6 = LR_read_data('simulate5_6')
+# X_sim5_7, Y_sim5_7, names_sim5_7, df_5_7 = LR_read_data('simulate5_7')
+# X_sim5_8, Y_sim5_8, names_sim5_8, df_5_8 = LR_read_data('simulate5_8')
+# X_sim5_9, Y_sim5_9, names_sim5_9, df_5_9 = LR_read_data('simulate5_9')
+# X_sim5_10, Y_sim5_10, names_sim5_10, df_5_10 = LR_read_data('simulate5_10')
+# X_sim10_1, Y_sim10_1, names_sim10_1, df_10_1 = LR_read_data('simulate10_1')
+# X_sim10_2, Y_sim10_2, names_sim10_2, df_10_2 = LR_read_data('simulate10_2')
+# X_sim10_3, Y_sim10_3, names_sim10_3, df_10_3 = LR_read_data('simulate10_3')
+# X_sim10_4, Y_sim10_4, names_sim10_4, df_10_4 = LR_read_data('simulate10_4')
+# X_sim10_5, Y_sim10_5, names_sim10_5, df_10_5= LR_read_data('simulate10_5')
+# X_sim10_6, Y_sim10_6, names_sim10_6, df_10_6 = LR_read_data('simulate10_6')
+# X_sim10_7, Y_sim10_7, names_sim10_7, df_10_7 = LR_read_data('simulate10_7')
+# X_sim10_8, Y_sim10_8, names_sim10_8, df_10_8 = LR_read_data('simulate10_8')
+# X_sim10_9, Y_sim10_9, names_sim10_9, df_10_9 = LR_read_data('simulate10_9')
+# X_sim10_10, Y_sim10_10, names_sim10_10, df_10_10 = LR_read_data('simulate10_10')
+X_sim50_1, Y_sim50_1, names_sim50_1, df_50_1 = LR_read_data('simulate50_1')
+X_sim50_2, Y_sim50_2, names_sim50_2, df_50_2 = LR_read_data('simulate50_2')
+X_sim50_3, Y_sim50_3, names_sim50_3, df_50_3 = LR_read_data('simulate50_3')
+X_sim50_4, Y_sim50_4, names_sim50_4, df_50_4 = LR_read_data('simulate50_4')
+X_sim50_5, Y_sim50_5, names_sim50_5, df_50_5 = LR_read_data('simulate50_5')
+X_sim50_6, Y_sim50_6, names_sim50_6, df_50_6 = LR_read_data('simulate50_6')
+X_sim50_7, Y_sim50_7, names_sim50_7, df_50_7 = LR_read_data('simulate50_7')
+X_sim50_8, Y_sim50_8, names_sim50_8, df_50_8 = LR_read_data('simulate50_8')
+X_sim50_9, Y_sim50_9, names_sim50_9, df_50_9 = LR_read_data('simulate50_9')
+X_sim50_10, Y_sim50_10, names_sim50_10, df_50_10 = LR_read_data('simulate50_10')
 
 
-#----------- run LR_func and get results from it for 34 datasets
 
-file_name = ['breastcancer', 'spam', 'bank', 'tbrisk_cpa','simulate5_1_data', 'simulate5_2_data', 'simulate5_3_data', 
-             'simulate5_4_data', 'simulate5_5_data', 'simulate5_6_data', 'simulate5_7_data', 'simulate5_8_data', 
-             'simulate5_9_data', 'simulate5_10_data', 'simulate10_1_data', 'simulate10_2_data','simulate10_3_data', 
-             'simulate10_4_data', 'simulate10_5_data', 'simulate10_6_data', 'simulate10_7_data', 'simulate10_8_data', 
-             'simulate10_9_data', 'simulate10_10_data', 'simulate50_1_data', 'simulate50_2_data', 'simulate50_3_data', 'simulate50_4_data', 'simulate50_5_data', 'simulate50_6_data', 'simulate50_7_data', 'simulate50_8_data', 'simulate50_9_data', 'simulate50_10_data']
 
-def LR_process()
+#------------------ change last line to create or append to xlsx ----------------------------------------
+
+# lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_breast, Y_breast)
+
+# coef_lr_df = pd.DataFrame(list(df_breast.columns)).copy()
+# coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+# coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# # print('----------------- Coef unrounded -------------')
+# # print(coef_lr_df)
+
+# coef_lr_df['Coefs'] = coef_round.transpose()
+# coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+# coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+# coef_lr_df.sort_index(inplace=True)
+# listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+#                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+# coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# # print('----------------- Coef rounded -------------')
+# # print(coef_lr_df)
+# filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+# print(accuracy)
+
+
+
+# # #--------------------------------
+# lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_tbrisk_cpa, Y_tbrisk_cpa)
+
+# coef_lr_df = pd.DataFrame(list(df_tb.columns)).copy()
+# coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+# coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# # print('----------------- Coef unrounded -------------')
+# # print(coef_lr_df)
+
+# coef_lr_df['Coefs'] = coef_round.transpose()
+# coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+# coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+# coef_lr_df.sort_index(inplace=True)
+# listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+#                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+# coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# # print('----------------- Coef rounded -------------')
+# # print(coef_lr_df)
+# filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# # filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+# with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+#                     mode='a') as writer:  
+#     filter_coef_lr.to_excel(writer, sheet_name='tb.dat.LR_')  
+
+# print(accuracy)
+
+# # #-------------------
+
+
+# lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_spam, Y_spam)
+
+# coef_lr_df = pd.DataFrame(list(df_spam.columns)).copy()
+# coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+# coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# # print('----------------- Coef unrounded -------------')
+# # print(coef_lr_df)
+
+# coef_lr_df['Coefs'] = coef_round.transpose()
+# coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+# coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+# coef_lr_df.sort_index(inplace=True)
+# listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+#                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+# coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# # print('----------------- Coef rounded -------------')
+# # print(coef_lr_df)
+# filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# # filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+# with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+#                     mode='a') as writer:  
+#     filter_coef_lr.to_excel(writer, sheet_name='spam.dat.LR_')  
+# print(accuracy)
+
+
+# # -------------------------
+
+
+
+
+
+# lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_bank, Y_bank)
+
+# coef_lr_df = pd.DataFrame(list(df_bank.columns)).copy()
+# coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+# coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# # print('----------------- Coef unrounded -------------')
+# # print(coef_lr_df)
+
+# coef_lr_df['Coefs'] = coef_round.transpose()
+# coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+# coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+# coef_lr_df.sort_index(inplace=True)
+# listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+#                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+#                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+# coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# # print('----------------- Coef rounded -------------')
+# # print(coef_lr_df)
+# filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# # filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+# with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+#                     mode='a') as writer:  
+#     filter_coef_lr.to_excel(writer, sheet_name='bank.dat.LR_')  
+
+# print(accuracy)
+
+
+
+
+
+#--------------- simulate data -----------
+#-----------------LR---------------------
+
+#---------------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_1, Y_sim50_1)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_1.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.9106')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_1.dat.LR_')  
+
+print(accuracy)
+
+
+#---------------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_2, Y_sim50_2)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_2.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_2.dat.LR_')  
+
+print(accuracy)
+
+
+
+#---------------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_3, Y_sim50_3)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_3.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_3.dat.LR_')  
+
+print(accuracy)
+
+
+
+
+#---------------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_4, Y_sim50_4)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_4.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_4.dat.LR_')  
+
+print(accuracy)
+
+
+
+#---------------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_5, Y_sim50_5)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_5.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_5.dat.LR_')  
+
+print(accuracy)
+
+
+#-------------------------------------
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_6, Y_sim50_6)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_6.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_6.dat.LR_')  
+
+print(accuracy)
+
+#---------------------------------------
+
+
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_7, Y_sim50_7)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_7.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_7.dat.LR_')  
+
+print(accuracy)
+
+#---------------------------------------
+
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_8, Y_sim50_8)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_8.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_8.dat.LR_')  
+
+print(accuracy)
+
+#---------------------------------------
+
+
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_9, Y_sim50_9)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_9.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_9.dat.LR_')  
+
+print(accuracy)
+
+#---------------------------------------
+
+
+
+lr_coef, coef_round, lr_int, y_pred_prob, auc, accuracy, sensitivity, specificity = LR_func(X_sim50_10, Y_sim50_10)
+
+
+coef_lr_df = pd.DataFrame(list(df_50_10.columns)).copy()
+coef_lr_df.insert(len(coef_lr_df.columns),"Coefs",lr_coef.transpose())
+coef_lr_df.rename(columns = {0:'Features'}, inplace = True)
+
+# print('----------------- Coef unrounded -------------')
+# print(coef_lr_df)
+
+coef_lr_df['Coefs'] = coef_round.transpose()
+coef_lr_df.loc[-1] = ('Intercept', lr_int.transpose())
+coef_lr_df.index = coef_lr_df.index + 1  # shifting index
+coef_lr_df.sort_index(inplace=True)
+listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
+                pd.Series(['Sensitivity', sensitivity], index=coef_lr_df.columns ) ,
+                pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
+                pd.Series(['AUC', auc], index=coef_lr_df.columns )]
+coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
+# print('----------------- Coef rounded -------------')
+# print(coef_lr_df)
+filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
+
+# filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx", sheet_name='breast.dat.LR_0.956')
+
+with pd.ExcelWriter("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare_update.xlsx",
+                    mode='a') as writer:  
+    filter_coef_lr.to_excel(writer, sheet_name='sim50_10.dat.LR_')  
+
+print(accuracy)
+
+#---------------------------------------
+
+
