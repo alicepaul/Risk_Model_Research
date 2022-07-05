@@ -67,7 +67,7 @@ listOfSeries = [pd.Series(['Accuracy', accuracy], index=coef_lr_df.columns ) ,
                 pd.Series(['Specificity', specificity], index=coef_lr_df.columns ),
                 pd.Series(['AUC', auc], index=coef_lr_df.columns )]
 coef_lr_df = coef_lr_df.append(listOfSeries,ignore_index=True)
-coef_lr_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr_simulate_unrounded.csv')
+# coef_lr_df.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/lr_simulate_unrounded.csv')
 print('----------------- Coef unrounded -------------')
 print(coef_lr_df)
 
@@ -76,5 +76,5 @@ coef_lr_df['Coefs'].loc[1:41] = (coef_lr_df['Coefs'].loc[1:41] * 2).round(0)
 print('----------------- Coef * 2 rounded -------------')
 print(coef_lr_df)
 filter_coef_lr = coef_lr_df[(coef_lr_df['Coefs'] != 0.0) & (coef_lr_df['Coefs'] !=-0.0) ]
-filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_simulate.csv')
+# # filter_coef_lr.to_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/filter_lr_simulate.csv')
 filter_coef_lr.to_excel("/Users/zhaotongtong/Desktop/Risk_Model_Research/risk-slim/examples/results/result_compare.xlsx", sheet_name='filter_lr_simulate')  

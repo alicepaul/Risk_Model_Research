@@ -113,4 +113,6 @@ print(model_info['solution'])
 print('-------')
 print(prob_tb)
 
-        
+cm = fp, fn, tp, tn
+
+confusion_matrix(data['Y'], pred_vals_)
