@@ -1,9 +1,4 @@
-risk-slim-self-edited-README
-========
-the added LR and CPA for 3 datasets are in examples folder, results folder stores all the model outputs for 3 datasets
-
-
-risk-slim-original-README
+risk-slim
 ========
 
 risk-slim is a machine learning method to fit simple customized risk scores in python. 

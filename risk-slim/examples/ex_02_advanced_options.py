@@ -11,7 +11,7 @@ sample_weights_csv_file = None                              # csv file of sample
 
 # problem parameters
 max_coefficient = 5                                         # value of largest/smallest coefficient
-max_L0_value = 10                                            # maximum model size
+max_L0_value = 5                                            # maximum model size
 max_offset = 50                                             # maximum value of offset parameter (optional)
 c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models; we set to a small value (1e-6) so that we get a model with max_L0_value terms
 w_pos = 1.00                                                # relative weight on examples with y = +1; w_neg = 1.00 (optional)
@@ -83,15 +83,15 @@ settings = {
     #
     'init_use_rounding': True,                          # use Rd in initialization procedure
     'init_rounding_max_runtime': 30.0,                  # max runtime for Rd in initialization procedure
-    'init_rounding_max_solutions': 15,                   # max solutions to round using Rd
+    'init_rounding_max_solutions': 5,                   # max solutions to round using Rd
     #
     'init_use_sequential_rounding': True,               # use SeqRd in initialization procedure
     'init_sequential_rounding_max_runtime': 10.0,       # max runtime for SeqRd in initialization procedure
-    'init_sequential_rounding_max_solutions': 15,        # max solutions to round using SeqRd
+    'init_sequential_rounding_max_solutions': 5,        # max solutions to round using SeqRd
     #
     'init_polishing_after': True,                       # polish after rounding
     'init_polishing_max_runtime': 30.0,                 # max runtime for polishing
-    'init_polishing_max_solutions': 15,                  # max solutions to polish
+    'init_polishing_max_solutions': 5,                  # max solutions to polish
     #
     # CPLEX Solver Parameters
     'cplex_randomseed': 0,                              # random seed
