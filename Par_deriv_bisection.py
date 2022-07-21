@@ -187,6 +187,8 @@ for f in files:
 # writer.save()
 # writer.close()
 
+
+
 # alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
 def par_deriv(n, alpha, beta, X, y, gamma, i, j):
     
@@ -224,14 +226,12 @@ def bisec_search(function, a, b, NMAX, TOL=1.0):
     return c 
 
 f = lambda x: -(x+2)**3-x-2 
-c = bisec_search(f,-10, 10, 10, TOL=1.0)
+c = bisec_search(f,-10, 10, 5, TOL=1.0)
 print(c)    
     
-# for i in range(n):
-    
-#     for j in range(p):
-#         db_j = par_deriv(n,1.0,beta,X,y,1.0,i,j)
 
+# for i in range(n):
+#   for j in range(p):
 
 
 
