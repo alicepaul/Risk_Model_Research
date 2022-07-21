@@ -190,35 +190,59 @@ for f in files:
 
 
 # alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
-def par_deriv(n, alpha, beta, X, y, gamma, i, j):
+def par_deriv(n, alpha, beta, X, y,lambda, j):
     
-    pd_1 = alpha * y[j] * (X[i,j].T) * beta[j]
-    Pr = np.exp(alpha*(np.dot(beta,X[i].T))) / 1.0+np.exp(alpha*((np.dot(beta,X[i].T))))                                  
-    pd_2 = alpha*X[i,j]*Pr
-    db_j = np.dot((-1/n), [np.sum(pd_1-pd_2)])+ np.dot(0.1, gamma)
+    pd_1 = np.dot(y,X[j]) * beta[j] * alpha
+    Pr = np.exp(np.dot(X,beta)*alpha)
+    Pr = Pr/(1.0+Pr)                               
+    pd_2 = alpha*(np.dot(X[;,j], Pr))
+    
+    if beta[j] > 0:
+        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)] + lambda
+    elif beta[j] < 0:
+        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)] - lambda
+    else beta[j] == 0: 
+        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)]
+
     print("partial derivative:", db_j)
     
     return db_j
 
-
-def bisec_search(function, a, b, NMAX, TOL=1.0):
+def loss_f(n, alpha, beta, X, y, lambda):
+    pd_1 = np.dot(X,beta)
+    pd_1 = np.dot(y,pd_1) * alpha
+    Pr = 1.0 + np.exp(np.dot(X,beta)*alpha)
+    Pr = np.sum(np.log(Pr))                               
     
-    if f(a)*f(b) >= 0:
+    min_j = (-1.0/n)*[np.sum(pd_1-Pr)] + lambda*np.sum(abs(beta))
+    
+    return min_j
+    
+def bisec_search(der_f, loss_f, a, b, NMAX, TOL=1.0):
+    
+    if der_f(a)*der_f(b) >= 0:
         print("Bisection's condition is not satisfied")
         return None
     
     N = 1
     
     while N <= NMAX:
+        
+        # TODO: put floor make sure c is integer
         c = (a+b)/2
         
-        if f(c) == 0 or (b-a)/2 < TOL:
+        if der_f(c) == 0
+            
             print("Found solution:", c)
             break
         
+        # if 
+        # # TODO: check the actual LR loss function to make sure a or b
+        # # call loss_f here to check which is best
+         
         N += 1
         
-        if np.sign(f(c)) == np.sign(f(a)):
+        if np.sign(der_f(c)) == np.sign(der_f(a)):
             a = c
         else:
             b = c
@@ -230,8 +254,7 @@ c = bisec_search(f,-10, 10, 5, TOL=1.0)
 print(c)    
     
 
-# for i in range(n):
-#   for j in range(p):
+#   for j in range(1,p+1):
 
 
 
