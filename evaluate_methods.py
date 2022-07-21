@@ -112,7 +112,7 @@ def record_measures(f, n, p, method, measures, non_zer, res):
 
 
 # directory of files 
-my_path = "/Users/alice/Dropbox/risk_models/sim_data/"
+my_path = "/Users/zhaotongtong/Desktop/Risk_Model_Research/sim_data"
 files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
 # results dataframe and excel sheets
@@ -134,7 +134,7 @@ for f in files:
         sample_f = None
     data = riskslim.load_data_from_csv(dataset_csv_file = os.path.join(my_path,f),
                                    sample_weights_csv_file = sample_f)
-    n = data["X"].shape[0]
+    n = data["X"].shape[0]  #rows
     p = data["X"].shape[1]-1
     
     # coefficient frame
