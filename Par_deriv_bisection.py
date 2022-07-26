@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report
 from statistics import median
 import os
 import riskslim
-
+import math
 
 def CPA_coef(data):
    
@@ -136,7 +136,8 @@ for f in files:
                                    sample_weights_csv_file = sample_f)
     n = data["X"].shape[0]  # number of observations
     p = data["X"].shape[1]-1 # number of features
-    print("p",p)   
+    print("p",p)
+    print("n",n)   
     X = data['X']
     y = data['Y']
     
@@ -157,6 +158,7 @@ for f in files:
     res = record_measures(f,n,p,"LR",lr_measures,np.count_nonzero(coef_lr), res)
     coef_df["LR"] = coef_lr
     beta = coef_lr
+    print(np.shape(beta))
     b_0 = coef_lr[0]
     print("b_0",b_0)
     
@@ -190,34 +192,38 @@ for f in files:
 
 
 # alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
-def par_deriv(n, alpha, beta, X, y,lambda, j):
+def par_deriv(n, alpha, beta, X, y,lamb_da, j):
     
-    pd_1 = np.dot(y,X[j]) * beta[j] * alpha
+    # TODO: ATTENTION! swtich y and X[j]???
+    pd_1 = np.dot(y.flatten(), X[:,j]) * beta[j] * alpha
     Pr = np.exp(np.dot(X,beta)*alpha)
     Pr = Pr/(1.0+Pr)                               
-    pd_2 = alpha*(np.dot(X[;,j], Pr))
+    pd_2 = alpha*(np.dot(X[:,j], Pr))
     
     if beta[j] > 0:
-        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)] + lambda
+        db_j = (-1/n)*np.asarray([np.sum(pd_1-pd_2)]) + lamb_da
     elif beta[j] < 0:
-        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)] - lambda
-    else beta[j] == 0: 
-        db_j = (-1.0/n)*[np.sum(pd_1-pd_2)]
+        db_j = (-1/n)*np.asarray([np.sum(pd_1-pd_2)]) - lamb_da
+    elif beta[j] == 0: 
+        db_j = (-1/n)*np.asarray([np.sum(pd_1-pd_2)])
 
     print("partial derivative:", db_j)
     
     return db_j
 
-def loss_f(n, alpha, beta, X, y, lambda):
+
+def loss_f(n, alpha, beta, X, y, lamb_da):
+    
     pd_1 = np.dot(X,beta)
     pd_1 = np.dot(y,pd_1) * alpha
     Pr = 1.0 + np.exp(np.dot(X,beta)*alpha)
     Pr = np.sum(np.log(Pr))                               
     
-    min_j = (-1.0/n)*[np.sum(pd_1-Pr)] + lambda*np.sum(abs(beta))
+    min_j = (-1.0/n)*[np.sum(pd_1-Pr)] + lamb_da*np.sum(abs(beta))
     
     return min_j
-    
+
+
 def bisec_search(der_f, loss_f, a, b, NMAX, TOL=1.0):
     
     if der_f(a)*der_f(b) >= 0:
@@ -227,35 +233,58 @@ def bisec_search(der_f, loss_f, a, b, NMAX, TOL=1.0):
     N = 1
     
     while N <= NMAX:
-        
         # TODO: put floor make sure c is integer
-        c = (a+b)/2
-        
-        if der_f(c) == 0
-            
+        c = math.floor((a+b)/2)
+        if der_f(c) == 0:
             print("Found solution:", c)
             break
         
-        # if 
         # # TODO: check the actual LR loss function to make sure a or b
         # # call loss_f here to check which is best
-         
         N += 1
-        
         if np.sign(der_f(c)) == np.sign(der_f(a)):
             a = c
         else:
             b = c
+    
+        # loss_f(n, alpha, beta, X, y, lambda)
             
     return c 
 
-f = lambda x: -(x+2)**3-x-2 
-c = bisec_search(f,-10, 10, 5, TOL=1.0)
-print(c)    
+def coef_only(beta):
+    coef = np.delete(beta, (0), axis=0)
+    print("coef_only size",np.shape(coef))
+    return coef
+
+
+def update_b0_a(data,beta):
+    coef = coef_only(beta)
+    X_i = data['X'][:,1:]
+    zi = np.dot(X_i,coef)
+    lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
+    lr_res = lr_mod.fit(zi, data['Y'].flatten())
+    new_coef = lr_res.coef_.flatten()
+    alpha = new_coef[1]
+    b0_update = new_coef[0]
+    b0_final = b0_update/alpha
+    
+    return b0_final, alpha
+    
     
 
-#   for j in range(1,p+1):
 
+
+#-------------------
+db_j = par_deriv(n, alpha, beta, data['X'], data['Y'],0.1, 1)
+# coef = coef_only(beta)
+# X_i = data['X'][:,1:]
+# zi = np.dot(X_i,coef)
+# print(np.shape(zi))
+# print(db_j)
+# f = 
+# c = bisec_search(f,-10, 10, 5, TOL=1.0)
+# print(c)    
+    
 
 
 

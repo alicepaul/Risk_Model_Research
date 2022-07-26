@@ -139,41 +139,6 @@ def LR_func(X,Y):
 # #--------------------- sample preprocess ---------------
 
 # X_breast, Y_breast, names_breast, df_breast = LR_read_data('breastcancer')
-# X_spam, Y_spam, names_spam, df_spam = LR_read_data('spambase')
-# X_bank, Y_bank, names_bank, df_bank = LR_read_data('bank')
-# X_tbrisk_cpa, Y_tbrisk_cpa, names_tbrisk_cpa, df_tb = LR_read_data('tbrisk_cpa')
-# X_sim5_1, Y_sim5_1, names_sim5_1, df_5_1 = LR_read_data('simulate5_1')
-# X_sim5_2, Y_sim5_2, names_sim5_2, df_5_2 = LR_read_data('simulate5_2')
-# X_sim5_3, Y_sim5_3, names_sim5_3, df_5_3 = LR_read_data('simulate5_3')
-# X_sim5_4, Y_sim5_4, names_sim5_4, df_5_4 = LR_read_data('simulate5_4')
-# X_sim5_5, Y_sim5_5, names_sim5_5, df_5_5= LR_read_data('simulate5_5')
-# X_sim5_6, Y_sim5_6, names_sim5_6, df_5_6 = LR_read_data('simulate5_6')
-# X_sim5_7, Y_sim5_7, names_sim5_7, df_5_7 = LR_read_data('simulate5_7')
-# X_sim5_8, Y_sim5_8, names_sim5_8, df_5_8 = LR_read_data('simulate5_8')
-# X_sim5_9, Y_sim5_9, names_sim5_9, df_5_9 = LR_read_data('simulate5_9')
-# X_sim5_10, Y_sim5_10, names_sim5_10, df_5_10 = LR_read_data('simulate5_10')
-# X_sim10_1, Y_sim10_1, names_sim10_1, df_10_1 = LR_read_data('simulate10_1')
-# X_sim10_2, Y_sim10_2, names_sim10_2, df_10_2 = LR_read_data('simulate10_2')
-# X_sim10_3, Y_sim10_3, names_sim10_3, df_10_3 = LR_read_data('simulate10_3')
-# X_sim10_4, Y_sim10_4, names_sim10_4, df_10_4 = LR_read_data('simulate10_4')
-# X_sim10_5, Y_sim10_5, names_sim10_5, df_10_5= LR_read_data('simulate10_5')
-# X_sim10_6, Y_sim10_6, names_sim10_6, df_10_6 = LR_read_data('simulate10_6')
-# X_sim10_7, Y_sim10_7, names_sim10_7, df_10_7 = LR_read_data('simulate10_7')
-# X_sim10_8, Y_sim10_8, names_sim10_8, df_10_8 = LR_read_data('simulate10_8')
-# X_sim10_9, Y_sim10_9, names_sim10_9, df_10_9 = LR_read_data('simulate10_9')
-# X_sim10_10, Y_sim10_10, names_sim10_10, df_10_10 = LR_read_data('simulate10_10')
-X_sim50_1, Y_sim50_1, names_sim50_1, df_50_1 = LR_read_data('simulate50_1')
-X_sim50_2, Y_sim50_2, names_sim50_2, df_50_2 = LR_read_data('simulate50_2')
-X_sim50_3, Y_sim50_3, names_sim50_3, df_50_3 = LR_read_data('simulate50_3')
-X_sim50_4, Y_sim50_4, names_sim50_4, df_50_4 = LR_read_data('simulate50_4')
-X_sim50_5, Y_sim50_5, names_sim50_5, df_50_5 = LR_read_data('simulate50_5')
-X_sim50_6, Y_sim50_6, names_sim50_6, df_50_6 = LR_read_data('simulate50_6')
-X_sim50_7, Y_sim50_7, names_sim50_7, df_50_7 = LR_read_data('simulate50_7')
-X_sim50_8, Y_sim50_8, names_sim50_8, df_50_8 = LR_read_data('simulate50_8')
-X_sim50_9, Y_sim50_9, names_sim50_9, df_50_9 = LR_read_data('simulate50_9')
-X_sim50_10, Y_sim50_10, names_sim50_10, df_50_10 = LR_read_data('simulate50_10')
-
-
 
 
 #------------------ change last line to create or append to xlsx ----------------------------------------
