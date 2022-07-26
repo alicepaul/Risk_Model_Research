@@ -40,8 +40,6 @@ for f in files:
     # logistic regression
     coef_lr = LR_coef(data)
     lr_measures = get_metrics(data,coef_lr)
-    res = record_measures(f,n,p,"LR",lr_measures,np.count_nonzero(coef_lr), res)
-    coef_df["LR"] = coef_lr
     beta = coef_lr
     print(np.shape(beta))
     b_0 = coef_lr[0]
@@ -50,8 +48,6 @@ for f in files:
     # rounded logistic regression
     coef_round = round_coef(coef_lr)
     lr_round_measures = get_metrics(data,coef_round)
-    res = record_measures(f,n,p,"Round", lr_round_measures, np.count_nonzero(coef_round), res)
-    coef_df["Round"] = coef_round
     beta_round = coef_round
     b_0_round = coef_round[0]
     print("b_0_round",b_0_round)
@@ -60,26 +56,16 @@ for f in files:
     alpha = median(coef_lr[1:len(coef_lr)])
     coef_med = round_coef(coef_lr, alpha)
     lr_med_measures = get_metrics(data,coef_med, alpha)
-    res = record_measures(f,n,p,"Round_Med",lr_med_measures, np.count_nonzero(coef_med), res)
-    coef_df["Round_Med"] = coef_med
     beta_med = coef_med
     b_0_med = coef_med[0]
     print("b_0_med",b_0_med)
- # ----------------------------------------------------   
-    # write coefficient info
-    # coef_df.to_excel(writer, sheet_name=f, index=False)
-    
-    
-# res.to_csv(os.path.join(my_path,"results.csv"), index=False)
-# writer.save()
-# writer.close()
+ # ----------------------------------------------------  
 
 
 
 # alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
 def par_deriv(n, alpha, beta, X, y,lamb_da, j):
     
-    # TODO: ATTENTION! swtich y and X[j]???
     pd_1 = np.dot(y.flatten(), X[:,j]) * beta[j] * alpha
     Pr = np.exp(np.dot(X,beta)*alpha)
     Pr = Pr/(1.0+Pr)                               
@@ -99,19 +85,23 @@ def par_deriv(n, alpha, beta, X, y,lamb_da, j):
 
 def loss_f(n, alpha, beta, X, y, lamb_da):
     
-    pd_1 = np.dot(X,beta)
-    pd_1 = np.dot(y,pd_1) * alpha
-    Pr = 1.0 + np.exp(np.dot(X,beta)*alpha)
+    pd_1 = np.dot(X, beta)
+    pd_1 = np.dot(y.flatten(), pd_1) * alpha
+    Pr = 1.0 + np.exp(np.dot(X, beta) * alpha)
     Pr = np.sum(np.log(Pr))                               
     
-    min_j = (-1.0/n)*[np.sum(pd_1-Pr)] + lamb_da*np.sum(abs(beta))
+    minimize_j = (-1/n) * np.asarray([np.sum(pd_1-Pr)]) + lamb_da * np.asarray([np.sum(abs(beta))])
     
-    return min_j
+    return minimize_j
 
 
 def bisec_search(der_f, loss_f, a, b, beta, NMAX, TOL=1.0):
     
-    if der_f(a)*der_f(b) >= 0:
+    beta_j_a = a
+    beta_j_b = b
+    der_f_a = par_deriv(n, alpha, beta, data['X'], data['Y'],0.1, beta_j_a)
+    der_f_b = par_deriv(n, alpha, beta, data['X'], data['Y'],0.1, beta_j_b)
+    if der_f_a * der_f_b >= 0:
         print("Bisection's condition is not satisfied")
         return None
     
@@ -128,9 +118,9 @@ def bisec_search(der_f, loss_f, a, b, beta, NMAX, TOL=1.0):
             beta_a[j] = a
             beta_b = beta
             beta_b[j] = b
-            minimize_a = loss_f(n, alpha, beta_a, X, y, lamb_da)
-            minimize_b = loss_f(n, alpha, beta_b, X, y, lamb_da)
-            if minimize_a < minimize_b
+            minimize_a = loss_f(n, alpha, beta_a[j], X, y, lamb_da)
+            minimize_b = loss_f(n, alpha, beta_b[j], X, y, lamb_da)
+            if minimize_a < minimize_b:
                 return a 
             else: 
                 return b
@@ -157,14 +147,5 @@ def update_b0_a(data,beta):
     
     return b0_final, alpha
     
-    
-
-
-
-#-------------------
-db_j = par_deriv(n, alpha, beta, data['X'], data['Y'],0.1, 1)
-
-
-bisec_search(par_deriv, loss_f(n, alpha, beta, X, y, lamb_da), -10, 10, 10, TOL=1.0)
 
 
