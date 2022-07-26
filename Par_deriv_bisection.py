@@ -60,10 +60,10 @@ for f in files:
     b_0_med = coef_med[0]
     print("b_0_med",b_0_med)
  # ----------------------------------------------------  
+    #Toke out file written part
 
 
-
-# alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
+# alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lamb_da=0.1
 def par_deriv(n, alpha, beta, X, y,lamb_da, j):
     pd_1 = np.dot(y.flatten(), X[:,j]) * beta[j] * alpha
     Pr = np.exp(np.dot(X,beta)*alpha)
@@ -80,7 +80,7 @@ def par_deriv(n, alpha, beta, X, y,lamb_da, j):
     print("partial derivative:", db_j)
     return db_j
 
-
+#loss_minimization
 def loss_f(n, alpha, beta, X, y, lamb_da):
     pd_1 = np.dot(X, beta)
     pd_1 = np.dot(y.flatten(), pd_1) * alpha
@@ -90,7 +90,7 @@ def loss_f(n, alpha, beta, X, y, lamb_da):
     
     return minimize_j
 
-
+# der_f = par_deriv
 def bisec_search(der_f, loss_f, a, b, beta, NMAX, TOL=1.0):
     beta_j_a = a
     beta_j_b = b
@@ -120,6 +120,7 @@ def bisec_search(der_f, loss_f, a, b, beta, NMAX, TOL=1.0):
             else: 
                 return b
         
+        #sign check
         N += 1
         if np.sign(der_f(c)) == np.sign(der_f(a)):
             a = c
