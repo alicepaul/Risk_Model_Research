@@ -1,30 +1,21 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import classification_report
-from statistics import median
 import os
-import riskslim
+from sklearn import datasets
+from eval_f_only import *
 
-X_test = np.array([[1, 1], [1, 2], [1,3], [1,4], [1, 5], [1, 6]])
-y_test = np.array([[0],[0],[0],[0],[1],[1]])
+#result by glm in R
+#(Intercept)    1.927      
+# x             -5.150
+# True coef: -4, True intercepr: 1
+X_test = np.array([[-0.6264538], [0.1836433], [-0.8356286], [1.5952808], [0.3295078], [-0.8204684], [0.4874291], [0.7383247], [0.5757814], [-0.3053884]])
+y_test = np.array([[1],[1],[1],[0],[0],[1],[0],[0],[1],[1]])
 
-
-def LR_coef(X, y):
-    #regression model
-    lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
-    lr_res = lr_mod.fit(X, y.flatten())
-    return(lr_res.coef_.flatten())
 
 
 # alpha=median or 1, beta=coef_vector, j=coef_index, gamma set to 1, lambda=0.1
 def par_deriv(n, alpha, beta, X, y,lamb_da, j):
     
-    # TODO: ATTENTION! swtich X[:,j] and y???
     pd_1 = np.dot(X[:,j],y) * beta[j] * alpha
     Pr = np.exp(np.dot(X,beta)*alpha)
     Pr = Pr/(1.0+Pr)                               
@@ -80,21 +71,15 @@ def bisec_search(der_f, loss_f, a, b, NMAX, TOL=1.0):
             
     return c 
 
-print(np.shape(X_test))
-print(np.shape(y_test))
-coef_lr = LR_coef(X_test,y_test)
+
+lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=True)
+lr_res = lr_mod.fit(X_test, y_test.flatten())
+coef_lr = lr_res.coef_.flatten()
+
 beta = coef_lr
-b_0 = coef_lr[0]
+b_0 = lr_res.intercept_
 
-print(beta)
-
-print(X_test[1])
-# db_j = par_deriv(3, 1, beta, X_test, y_test,0.1, 1)
-
-# print(db_j)
-# f = 
-# c = bisec_search(f,-10, 10, 5, TOL=1.0)
-# print(c)    
-    
+print("coef",beta)
+print("intercept",b_0)
 
 

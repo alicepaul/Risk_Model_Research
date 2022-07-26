@@ -1,124 +1,14 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import classification_report
-from statistics import median
 import os
 import riskslim
 import math
-
-def CPA_coef(data):
-   
-    # problem parameters
-    max_coefficient = 100                                       # value of largest/smallest coefficient
-    max_offset = 100*data['X'].shape[1]                         # maximum value of offset parameter(optional)
-    max_L0_value = data['X'].shape[1]-1                         # max L0 value - set equal to p
-    c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models
-
-    # create coefficient set and set the value of the offset parameter
-    coef_set = riskslim.CoefficientSet(variable_names = data['variable_names'], lb = -max_coefficient, ub = max_coefficient, sign = 0)
-    coef_set.update_intercept_bounds(X = data['X'], y = data['Y'], max_offset = max_offset)
-    
-    constraints = {
-        'L0_min': 0,
-        'L0_max': max_L0_value,
-        'coef_set':coef_set,
-    }
-
-    # major settings (see riskslim_ex_02_complete for full set of options)
-    settings = {
-        # Problem Parameters
-        'c0_value': c0_value,
-        #
-        # LCPA Settings
-        'max_runtime': 30.0,                               # max runtime for LCPA
-        'max_tolerance': np.finfo('float').eps,             # tolerance to stop LCPA (set to 0 to return provably optimal solution)
-        'display_cplex_progress': False,                     # print CPLEX progress on screen
-        'loss_computation': 'fast',                         # how to compute the loss function ('normal','fast','lookup')
-        #
-        # LCPA Improvements
-        'round_flag': True,                                # round continuous solutions with SeqRd
-        'polish_flag': True,                               # polish integer feasible solutions with DCD
-        'chained_updates_flag': True,                      # use chained updates
-        'add_cuts_at_heuristic_solutions': True,            # add cuts at integer feasible solutions found using polishing/rounding
-        #
-        # Initialization
-        'initialization_flag': True,                       # use initialization procedure
-        'init_max_runtime': 120.0,                         # max time to run CPA in initialization procedure
-        'init_max_coefficient_gap': 0.49,
-        #
-        # CPLEX Solver Parameters
-        'cplex_randomseed': 0,                              # random seed
-        'cplex_mipemphasis': 0,                             # cplex MIP strategy
-    }
-
-    # train model using lattice_cpa
-    model_info, mip_info, lcpa_info = riskslim.run_lattice_cpa(data, constraints, settings)
-
-    # return coefficients
-    return(model_info['solution'])
-
-def LR_coef(data):
-    #regression model
-    lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
-    lr_res = lr_mod.fit(data['X'], data['Y'].flatten())
-    return(lr_res.coef_.flatten())
-
-def round_coef(coef, alpha = 1.0):
-    coef_new = coef.copy()/alpha
-    coef_new = coef_new.round()
-    coef_new[0] = coef[0]/alpha
-    return(coef_new)
-
-def get_metrics(data, coef, alpha = 1.0):
-
-    # find v
-    v = np.dot(alpha*data['X'], coef)
-    v = v.astype(np.float128)
-    v = np.clip(v, -709.78, 709.78)
-    
-    # get predicted probabilities
-    prob_1 = 1.0 + np.exp(v)
-    prob = np.exp(v)/(prob_1)
-    pred_vals = np.zeros(shape=np.shape(prob))
-
-    # get predicted values (0.5 cutoff)
-    for i in range(len(prob)):
-        if prob[i] >= 0.5:
-            pred_vals[i] = 1
-        else:
-            pred_vals[i] = -1
-
-    # AUC
-    auc = roc_auc_score(data['Y'], prob)
-
-    # Confusion matrix measures
-    tn, fp, fn, tp = confusion_matrix(data['Y'], pred_vals, labels=[-1,1]).ravel()
-
-    accuracy=(tp+tn)/(tp+tn+fp+fn)
-    sensitivity = tp/(tp+fn)
-    specificity = tn/(tn+fp)
-            
-    return auc, accuracy, sensitivity, specificity
-    
-def record_measures(f, n, p, method, measures, non_zer, res):
-    data = [[f, n, p, method, measures[1], measures[2], measures[3], measures[0], non_zer]]
-    new_row = pd.DataFrame(data=data, columns=column_names)
-    return(pd.concat([res, new_row], ignore_index=True))
-
+from eval_f_only import *
 
 # directory of files 
 my_path = "/Users/zhaotongtong/Desktop/Risk_Model_Research/test_data"
 files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
-# results dataframe and excel sheets
-column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "non-zeros"]
-res = pd.DataFrame(columns = column_names)
-writer = pd.ExcelWriter(os.path.join(my_path,"res_coef.xlsx"), mode='w', if_sheet_exists='overlay')
 
 # iterate through files
 for f in files:
@@ -146,12 +36,7 @@ for f in files:
     coef_df = pd.DataFrame(data=coef_empty, columns = ["Vars","LR","Round","Round_Med"])
     coef_df["Vars"] = data["variable_names"]
 
-    # # cpa 
-    # coef_cpa = CPA_coef(data)
-    # cpa_measures = get_metrics(data,coef_cpa)
-    # res = record_measures(f,n,p,"CPA",cpa_measures,np.count_nonzero(coef_cpa), res)
-    # coef_df["CPA"] = coef_cpa
-    
+ 
     # logistic regression
     coef_lr = LR_coef(data)
     lr_measures = get_metrics(data,coef_lr)
@@ -182,7 +67,7 @@ for f in files:
     print("b_0_med",b_0_med)
  # ----------------------------------------------------   
     # write coefficient info
-    coef_df.to_excel(writer, sheet_name=f, index=False)
+    # coef_df.to_excel(writer, sheet_name=f, index=False)
     
     
 # res.to_csv(os.path.join(my_path,"results.csv"), index=False)
@@ -224,43 +109,45 @@ def loss_f(n, alpha, beta, X, y, lamb_da):
     return min_j
 
 
-def bisec_search(der_f, loss_f, a, b, NMAX, TOL=1.0):
+def bisec_search(der_f, loss_f, a, b, beta, NMAX, TOL=1.0):
     
     if der_f(a)*der_f(b) >= 0:
         print("Bisection's condition is not satisfied")
         return None
     
     N = 1
-    
     while N <= NMAX:
-        # TODO: put floor make sure c is integer
         c = math.floor((a+b)/2)
         if der_f(c) == 0:
             print("Found solution:", c)
             break
         
-        # # TODO: check the actual LR loss function to make sure a or b
-        # # call loss_f here to check which is best
+        #loss function check
+        if b-a == 1:
+            beta_a = beta
+            beta_a[j] = a
+            beta_b = beta
+            beta_b[j] = b
+            minimize_a = loss_f(n, alpha, beta_a, X, y, lamb_da)
+            minimize_b = loss_f(n, alpha, beta_b, X, y, lamb_da)
+            if minimize_a < minimize_b
+                return a 
+            else: 
+                return b
+        
         N += 1
         if np.sign(der_f(c)) == np.sign(der_f(a)):
             a = c
         else:
             b = c
-    
-        # loss_f(n, alpha, beta, X, y, lambda)
             
-    return c 
-
-def coef_only(beta):
-    coef = np.delete(beta, (0), axis=0)
-    print("coef_only size",np.shape(coef))
-    return coef
+    return c
 
 
 def update_b0_a(data,beta):
-    coef = coef_only(beta)
+    coef_only= np.delete(beta, (0), axis=0)
     X_i = data['X'][:,1:]
-    zi = np.dot(X_i,coef)
+    zi = np.dot(X_i,coef_only)
     lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
     lr_res = lr_mod.fit(zi, data['Y'].flatten())
     new_coef = lr_res.coef_.flatten()
@@ -276,15 +163,8 @@ def update_b0_a(data,beta):
 
 #-------------------
 db_j = par_deriv(n, alpha, beta, data['X'], data['Y'],0.1, 1)
-# coef = coef_only(beta)
-# X_i = data['X'][:,1:]
-# zi = np.dot(X_i,coef)
-# print(np.shape(zi))
-# print(db_j)
-# f = 
-# c = bisec_search(f,-10, 10, 5, TOL=1.0)
-# print(c)    
-    
 
+
+bisec_search(par_deriv, loss_f(n, alpha, beta, X, y, lamb_da), -10, 10, 10, TOL=1.0)
 
 
