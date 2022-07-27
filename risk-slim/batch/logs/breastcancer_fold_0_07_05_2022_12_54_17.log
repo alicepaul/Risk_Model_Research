@@ -1,0 +1,32 @@
+07-05-2022 12:54:20 PM | INFO     | running 'train_risk_slim.py'
+07-05-2022 12:54:20 PM | INFO     | working directory: '/Users/alice/Dropbox/risk-slim'
+07-05-2022 12:54:20 PM | INFO     | parsed the following variables:
+-c0_value : 1e-06
+-cvindices : /Users/alice/Dropbox/risk-slim/examples/data/breastcancer_cvindices.csv
+-data : /Users/alice/Dropbox/risk-slim/examples/data/breastcancer_data.csv
+-fold : 0
+-log : /Users/alice/Dropbox/risk-slim/batch/logs/breastcancer_fold_0_07_05_2022_12_54_17.log
+-max_coef : 5
+-max_offset : -1
+-max_size : 5
+-results : /Users/alice/Dropbox/risk-slim/batch/results/breastcancer_fold_0_results.p
+-settings : /Users/alice/Dropbox/risk-slim/batch/results/breastcancer_fold_0_settings.json
+-silent : False
+-timelimit : 60
+-w_pos : 1.0
+-weights : None
+
+07-05-2022 12:54:20 PM | INFO     | loading data and sample weights
+07-05-2022 12:54:20 PM | INFO     | creating coefficient set and constraints
+07-05-2022 12:54:26 PM | INFO     | saving results...
+07-05-2022 12:54:26 PM | INFO     | saved results as pickle file: '/Users/alice/Dropbox/risk-slim/batch/results/breastcancer_fold_0_results.p'
+07-05-2022 12:54:26 PM | INFO     | to access results, use this snippet:
+
+                			    import pickle
+                			    f = open(results_file, 'rb')
+                			    results = pickle.load(f)
+                
+07-05-2022 12:54:26 PM | INFO     | finished training
+07-05-2022 12:54:26 PM | INFO     | quitting
+
+

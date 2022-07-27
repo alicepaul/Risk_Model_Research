@@ -1,0 +1,20 @@
+06-06-2022 01:57:52 PM | INFO     | running 'train_risk_slim.py'
+06-06-2022 01:57:52 PM | INFO     | working directory: '/Users/Alice/Dropbox/risk-slim'
+06-06-2022 01:57:52 PM | INFO     | parsed the following variables:
+-c0_value : 1e-06
+-cvindices : /Users/Alice/Dropbox/risk-slim/examples/data/breastcancer_cvindices.csv
+-data : /Users/Alice/Dropbox/risk-slim/examples/data/breastcancer_data.csv
+-fold : 0
+-log : /Users/Alice/Dropbox/risk-slim/batch/logs/breastcancer_fold_0_06_06_2022_13_57_51.log
+-max_coef : 5
+-max_offset : -1
+-max_size : 5
+-results : /Users/Alice/Dropbox/risk-slim/batch/results/breastcancer_fold_0_results.p
+-settings : /Users/Alice/Dropbox/risk-slim/batch/results/breastcancer_fold_0_settings.json
+-silent : False
+-timelimit : 60
+-w_pos : 1.0
+-weights : None
+
+06-06-2022 01:57:52 PM | INFO     | loading data and sample weights
+06-06-2022 01:57:52 PM | INFO     | creating coefficient set and constraints
