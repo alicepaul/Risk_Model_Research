@@ -87,15 +87,15 @@ def run_experiments(my_path):
         #coef_df["Vars"] = data["variable_names"]
 
         # cpa
-        #s1 = time.time()
-        #coef_cpa = mtds.CPA_coef(data)
-        #t1 = time.time()
-        #res = record_measures(res, data, f, n, p, "CPA", coef_cpa, 1.0, t1-s1)
+        s1 = time.time()
+        coef_cpa = mtds.CPA_coef(data)
+        t1 = time.time()
+        res = record_measures(res, data, f, n, p, "CPA", coef_cpa, 1.0, t1-s1)
         #coef_df["CPA"] = coef_cpa
 
         # logistic regression
         s2 = time.time()
-        coef_lr = mtds.LR_coef(data, weights)
+        coef_lr = mtds.LR_coef(data, weights.flatten())
         t2 = time.time()
         res = record_measures(res, data, f, n, p, "LR", coef_lr, 1.0, t2-s2)
         #coef_df["LR"] = coef_lr
@@ -112,7 +112,7 @@ def run_experiments(my_path):
         alpha_med = median(np.abs(coef_lr[1:len(coef_lr)]))
         coef_med = mtds.round_coef(coef_lr, alpha_med)
         t4 = time.time()
-        res = record_measures(res, data, f, n, p, "Round_Med", coef_med, alpha_med, s4-t4+s2-t2)
+        res = record_measures(res, data, f, n, p, "Round_Med", coef_med, alpha_med, t4-s4+t2-s2)
         #coef_df["Round_Med"] = coef_med
         
         # coordinate descent from LR
@@ -121,7 +121,7 @@ def run_experiments(my_path):
         coef_cd = mtds.round_coef(coef_lr, alpha)
         alpha_cd, coef_cd = cd.coord_desc(data, 1.0/alpha, coef_cd)
         t5 = time.time()
-        res = record_measures(res, data, f, n, p, "CD", coef_cd, alpha_cd, t5-s5+s2-t2+s3-t3)
+        res = record_measures(res, data, f, n, p, "CD", coef_cd, alpha_cd, t5-s5+t2-s2+t3-s3)
         #coef_df["Round_Med"] = coef_med
         
         # write coefficient info
