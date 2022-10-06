@@ -6,10 +6,10 @@ from sklearn.linear_model import LogisticRegression
 import warnings
 from statistics import median
 
-def par_deriv(alpha, beta, X, y, weights, l1, j):
-    # Calculates partial derivate for beta_j in logistic regression with
-    # l1*L1 loss penalty and alpha*beta are current coefficients
-    # l1 = lambda
+def par_deriv_nll(alpha, beta, X, y, weights, j):
+    # Calculates partial derivative for beta_j in logistic regression with
+    # l0 is L0 penalization, alpha*beta are current coefficients
+    # Partial derivative only on NLL
     
     n = X.shape[0]
     
@@ -22,20 +22,14 @@ def par_deriv(alpha, beta, X, y, weights, l1, j):
     pr = pr/(1.0+pr)
     pd_2 = alpha*(np.dot(weights, np.multiply(X[:,j], pr)))
     
-    db_j = (-1.0/n)*(pd_1-pd_2)
+    db_j_nll = (-1.0/n)*(pd_1-pd_2)
     
-    # Add penalty term
-    penalty = 0
-    if beta[j] > 0:
-        penalty = l1
-    elif beta[j] < 0:
-        penalty = -l1
-
-    #print("partial derivative:", db_j)
-    return db_j+penalty
+    
+    #print("partial derivative:", db_j_nll)
+    return db_j_nll
 
 
-def obj_f(alpha, beta, X, y, weights, l1):
+def obj_f_nll(alpha, beta, X, y, weights, l0):
     # Calculates current objective function value in logistic regression with
     # l1*L1 loss penalty and alpha*beta are current coefficients
     n = X.shape[0]
@@ -45,22 +39,12 @@ def obj_f(alpha, beta, X, y, weights, l1):
     
     obj_1 = np.dot(weights, np.multiply(y, v))
     obj_2 = np.dot(weights, np.log(1+np.exp(v)))
-    minimize_j = (-1.0/n) * (obj_1-obj_2) + l1 * np.sum(np.abs(beta))
+    minimize_j_nll = (-1.0/n) * (obj_1-obj_2) + l0 * np.sum(np.abs(beta))
     
-    return minimize_j
+    return minimize_j_nll
     
-#def full_search(alpha, beta, X, y, l1, j, a=-10, b=10, TOL=1.0):
-#    obj = obj_f(alpha, beta, X, y, l1)
-#    for c in range(a, b+1):
-#        beta_c = beta.copy()
-#        beta_c[j] = c
-#        obj_c = obj_f(alpha, beta_c, X, y, l1)
-#        if obj_c < obj:
-#            obj = obj_c
-#            beta = beta_c
-#    return(beta)
 
-def bisec_search(alpha, beta, X, y, weights, l1, j, a=-10, b=10, TOL=1.0):
+def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     # Runs bisection search on beta_j to find the best value
 
     # Starting beta values and derivatives
@@ -68,8 +52,9 @@ def bisec_search(alpha, beta, X, y, weights, l1, j, a=-10, b=10, TOL=1.0):
     beta_a[j] = a
     beta_b = beta.copy()
     beta_b[j] = b
-    der_f_a = par_deriv(alpha, beta_a, X, y, weights, l1, j)
-    der_f_b = par_deriv(alpha, beta_b, X, y, weights, l1, j)
+    beta_0 = 0
+    der_f_a = par_deriv_nll(alpha, beta_a, X, y, weights, j)
+    der_f_b = par_deriv_nll(alpha, beta_b, X, y, weights, j)
     
     # Check that 0 derivative in range
     search = True
@@ -82,7 +67,7 @@ def bisec_search(alpha, beta, X, y, weights, l1, j, a=-10, b=10, TOL=1.0):
         c = math.floor((a+b)/2)
         beta_c = beta.copy()
         beta_c[j] = c
-        der_f_c = par_deriv(alpha, beta_c, X, y, weights, l1, j)
+        der_f_c = par_deriv(alpha, beta_c, X, y, weights, j)
         if der_f_c == 0:
             #print("Found solution:", c)
             return(beta_c)
@@ -98,11 +83,16 @@ def bisec_search(alpha, beta, X, y, weights, l1, j, a=-10, b=10, TOL=1.0):
             der_f_b = der_f_c
     
     # Find best of b and a in objective function
-    obj_a = obj_f(alpha, beta_a, X, y, weights, l1)
-    obj_b = obj_f(alpha, beta_b, X, y, weights, l1)
-    if obj_a < obj_b:
+    obj_a = obj_f(alpha, beta_a, X, y, weights, l0)
+    obj_b = obj_f(alpha, beta_b, X, y, weights, l0)
+    ### NEW : comapre NLL(b_j)+l0 < NLL(0)?
+    obj_0 = obj_f(alpha, beta_0, X, y, weights, l0)
+    if obj_a < obj_b and obj_a < obj_0:
         return beta_a
-    return beta_b
+    elif obj_a < obj_b and obj_a > obj_0:
+        return beta_0
+    else obj_a < obj_b and obj_a > obj_0:
+    
 
 
 def update_alpha(beta, X, y, weights):
@@ -121,7 +111,7 @@ def update_alpha(beta, X, y, weights):
     return alpha, beta
     
 
-def coord_desc(data, alpha, beta, l1 = 0.0, max_iter = 100, tol= 1e-5):
+def coord_desc_nll(data, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5):
     # Runs coordinate descent on algorithm from starting point alpha beta
     
     X = data['X']
@@ -140,7 +130,7 @@ def coord_desc(data, alpha, beta, l1 = 0.0, max_iter = 100, tol= 1e-5):
         old_beta = beta.copy()
         # Coodinate descent for each j
         for j in range(1,p):
-            beta = bisec_search(alpha, beta, X, y, weights, l1, j)
+            beta = bisec_search(alpha, beta, X, y, weights, l0, j)
             alpha, beta = update_alpha(beta, X, y, weights)
 
         # Check if change in beta is within tolerance to converge

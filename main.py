@@ -79,7 +79,7 @@ def run_experiments(my_path):
                                        sample_weights_csv_file = sample_f)
         n = data["X"].shape[0]  #rows
         p = data["X"].shape[1]-1
-        weights = data["sample_weights"] # TODO: implement
+        weights = data["sample_weights"]
         
         # coefficient frame
         #coef_empty = np.zeros(shape=(p+1,5))
