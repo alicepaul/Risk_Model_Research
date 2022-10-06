@@ -52,6 +52,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     beta_a[j] = a
     beta_b = beta.copy()
     beta_b[j] = b
+    ###NEW: NLL(0)
     beta_0 = 0
     der_f_a = par_deriv_nll(alpha, beta_a, X, y, weights, j)
     der_f_b = par_deriv_nll(alpha, beta_b, X, y, weights, j)
@@ -89,9 +90,10 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     obj_0 = obj_f(alpha, beta_0, X, y, weights, l0)
     if obj_a < obj_b and obj_a < obj_0:
         return beta_a
-    elif obj_a < obj_b and obj_a > obj_0:
+    elif obj_0 < obj_a and obj_0 < obj_b:
         return beta_0
-    else obj_a < obj_b and obj_a > obj_0:
+    else obj_b < obj_a and obj_b < obj_0:
+        return beta_b
     
 
 
