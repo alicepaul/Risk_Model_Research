@@ -11,6 +11,7 @@ import os
 import riskslim
 import time
 import sys
+import NLL_coordinate_descent as ncd
 
 # results dataframe and excel sheets
 column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "non-zeros", "med_abs", "max_abs", "time"]
@@ -119,7 +120,8 @@ def run_experiments(my_path):
         s5 = time.time()
         alpha = max(np.abs(coef_lr[1:]))/10.0 # bring within range
         coef_cd = mtds.round_coef(coef_lr, alpha)
-        alpha_cd, coef_cd = cd.coord_desc(data, 1.0/alpha, coef_cd)
+        ### NEW: changed cd to ncd.
+        alpha_cd, coef_cd = ncd.coord_desc(data, 1.0/alpha, coef_cd)
         t5 = time.time()
         res = record_measures(res, data, f, n, p, "CD", coef_cd, alpha_cd, t5-s5+t2-s2+t3-s3)
         #coef_df["Round_Med"] = coef_med
