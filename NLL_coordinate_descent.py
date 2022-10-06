@@ -39,7 +39,7 @@ def obj_f_nll(alpha, beta, X, y, weights, l0):
     
     obj_1 = np.dot(weights, np.multiply(y, v))
     obj_2 = np.dot(weights, np.log(1+np.exp(v)))
-    minimize_j_nll = (-1.0/n) * (obj_1-obj_2) + l0 * np.sum(np.abs(beta))
+    minimize_j_nll = (-1.0/n) * (obj_1-obj_2) + l0 * np.sum((beta!=0))
     
     return minimize_j_nll
     
@@ -92,8 +92,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
         return beta_a
     elif obj_0 < obj_a and obj_0 < obj_b:
         return beta_0
-    else obj_b < obj_a and obj_b < obj_0:
-        return beta_b
+    return beta_b
     
 
 
