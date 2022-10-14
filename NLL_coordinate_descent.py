@@ -69,7 +69,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
         c = math.floor((a+b)/2)
         beta_c = beta.copy()
         beta_c[j] = c
-        der_f_c = par_deriv(alpha, beta_c, X, y, weights, j)
+        der_f_c = par_deriv_nll(alpha, beta_c, X, y, weights, j)
         if der_f_c == 0:
             #print("Found solution:", c)
             return(beta_c)
@@ -85,10 +85,10 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
             der_f_b = der_f_c
     
     # Find best of b and a in objective function
-    obj_a = obj_f(alpha, beta_a, X, y, weights, l0)
-    obj_b = obj_f(alpha, beta_b, X, y, weights, l0)
+    obj_a = obj_f_nll(alpha, beta_a, X, y, weights, l0)
+    obj_b = obj_f_nll(alpha, beta_b, X, y, weights, l0)
     ### NEW : comapre NLL(b_j)+l0 < NLL(0)?
-    obj_0 = obj_f(alpha, beta_0, X, y, weights, l0)
+    obj_0 = obj_f_nll(alpha, beta_0, X, y, weights, l0)
     if obj_a < obj_b and obj_a < obj_0:
         return beta_a
     elif obj_0 < obj_a and obj_0 < obj_b:
