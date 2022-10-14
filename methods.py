@@ -7,13 +7,14 @@ import os
 import riskslim
 
 
-def CPA_coef(data):
+def CPA_coef(data,lambda0=1e-6):
    
     # problem parameters
+    
     max_coefficient = 100                                       # value of largest/smallest coefficient
     max_offset = 100*data['X'].shape[1]                         # maximum value of offset parameter(optional)
     max_L0_value = data['X'].shape[1]-1                         # max L0 value - set equal to p
-    c0_value = 1e-6                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models
+    c0_value = lambda0                                             # L0-penalty parameter such that c0_value > 0; larger values -> sparser models
 
     # create coefficient set and set the value of the offset parameter
     coef_set = riskslim.CoefficientSet(variable_names = data['variable_names'], lb = -max_coefficient, ub = max_coefficient, sign = 0)
@@ -61,9 +62,6 @@ def CPA_coef(data):
 def LR_coef(data, weights):
     #regression model
     lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
-    # ### NEW: Add train test split
-    # X_train, X_test, y_train, y_test = train_test_split(data['X'], data['Y'], test_size = 0.25, random_state = 42)
-    # lr_res = lr_mod.fit(X_train, y_train.flatten(), weights)
     lr_res = lr_mod.fit(data['X'], data['Y'].flatten(), weights)
     return(lr_res.coef_.flatten())
 

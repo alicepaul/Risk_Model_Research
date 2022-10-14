@@ -121,12 +121,12 @@ def update_alpha(beta, X, y, weights):
 def coord_desc_nll(data, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5):
     # Runs coordinate descent on algorithm from starting point alpha beta
     
-    ###?? Need to be change to X_train?
+   
     X = data['X']
     n = X.shape[0]
     weights = data['sample_weights'].flatten()
     
-    ###?? y_train?
+
     ytemp = data['Y']
     y = np.zeros(shape=(n))
     for i in range(n):
