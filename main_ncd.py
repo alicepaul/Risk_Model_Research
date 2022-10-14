@@ -51,12 +51,17 @@ def get_metrics(data, coef, alpha = 1.0):
             
     return auc, accuracy, sensitivity, specificity
     
-def record_measures(res, data, f, n, p, method, coef, alpha, time, lambda0=None):
+def record_measures(res, data, f, n, p, method, coef, alpha, time, lambda0, haslambda):
     # Adds record
     measures = get_metrics(data, coef, alpha)
-    data = [[f, n, p, method, measures[1], measures[2], measures[3], measures[0], np.count_nonzero(coef[1:]), median(np.abs(coef[1:])), np.max(np.abs(coef[1:])), time,  lambda0[1:]]]
-    new_row = pd.DataFrame(data=data, columns=column_names)
-    return(pd.concat([res, new_row], ignore_index=True))
+    if haslambda:
+        data = [[f, n, p, method, measures[1], measures[2], measures[3], measures[0], np.count_nonzero(coef[1:]), median(np.abs(coef[1:])), np.max(np.abs(coef[1:])), time,  lambda0]]
+        new_row = pd.DataFrame(data=data, columns=column_names)
+        return(pd.concat([res, new_row], ignore_index=True))
+    else:
+        data = [[f, n, p, method, measures[1], measures[2], measures[3], measures[0], np.count_nonzero(coef[1:]), median(np.abs(coef[1:])), np.max(np.abs(coef[1:])), time, None]]
+        new_row = pd.DataFrame(data=data, columns=column_names)
+        return(pd.concat([res, new_row], ignore_index=True))
 
 
 def run_experiments(my_path):
@@ -64,7 +69,6 @@ def run_experiments(my_path):
     files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
     res = pd.DataFrame(columns = column_names)
-    ### BUG!!
     writer = pd.ExcelWriter(os.path.join(my_path,"res_coef_ncd.xlsx"), engine='openpyxl', mode='a',if_sheet_exists='replace')
     
     # iterate through files
@@ -100,7 +104,7 @@ def run_experiments(my_path):
             s1 = time.time()
             coef_cpa = mtds.CPA_coef(data)
             t1 = time.time()
-            res = record_measures(res, data, f, n, p, "CPA", coef_cpa, 1.0, t1-s1, "None")
+            res = record_measures(res, data, f, n, p, "CPA", coef_cpa, 1.0, t1-s1, None, False)
             coef_df["CPA"] = coef_cpa
             
             # logistic regression
@@ -125,7 +129,7 @@ def run_experiments(my_path):
             ### NEW: changed cd to ncd.
             alpha_ncd, coef_ncd = ncd.coord_desc_nll(data, 1.0/alpha, coef_ncd)
             t5 = time.time()
-            res = record_measures(res, data, f, n, p, "NLLCD", coef_ncd, alpha_ncd, t5-s5+t2-s2+t3-s3, lambda0[i])
+            res = record_measures(res, data, f, n, p, "NLLCD", coef_ncd, alpha_ncd, t5-s5+t2-s2+t3-s3, lambda0[i], True)
             coef_df["NCD"] = coef_ncd
             
             # write coefficient info

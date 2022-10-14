@@ -37,7 +37,10 @@ def obj_f_nll(alpha, beta, X, y, weights, l0):
     
     # Calculate probs
     v = alpha * np.dot(X, beta)
-    
+    # print("v shape", np.shape(v))
+    # print("y shape", np.shape(y))
+    # print("X shape", np.shape(X))
+    # print("beta shape", np.shape(beta))
     obj_1 = np.dot(weights, np.multiply(y, v))
     obj_2 = np.dot(weights, np.log(1+np.exp(v)))
     minimize_j_nll = (-1.0/n) * (obj_1-obj_2) + l0 * np.sum((beta!=0))
@@ -54,7 +57,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     beta_b = beta.copy()
     beta_b[j] = b
     #NLL(0)
-    beta_0 = 0
+    beta_0 = np.zeros(np.shape(beta_a))
     der_f_a = par_deriv_nll(alpha, beta_a, X, y, weights, j)
     der_f_b = par_deriv_nll(alpha, beta_b, X, y, weights, j)
     
