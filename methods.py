@@ -61,6 +61,9 @@ def CPA_coef(data):
 def LR_coef(data, weights):
     #regression model
     lr_mod = LogisticRegression(penalty="none",solver="lbfgs",max_iter=1000,fit_intercept=False)
+    # ### NEW: Add train test split
+    # X_train, X_test, y_train, y_test = train_test_split(data['X'], data['Y'], test_size = 0.25, random_state = 42)
+    # lr_res = lr_mod.fit(X_train, y_train.flatten(), weights)
     lr_res = lr_mod.fit(data['X'], data['Y'].flatten(), weights)
     return(lr_res.coef_.flatten())
 

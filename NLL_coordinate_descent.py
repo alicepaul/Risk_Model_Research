@@ -3,6 +3,7 @@ import pandas as pd
 import riskslim
 import math
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 import warnings
 from statistics import median
 
@@ -52,7 +53,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     beta_a[j] = a
     beta_b = beta.copy()
     beta_b[j] = b
-    ###NEW: NLL(0)
+    #NLL(0)
     beta_0 = 0
     der_f_a = par_deriv_nll(alpha, beta_a, X, y, weights, j)
     der_f_b = par_deriv_nll(alpha, beta_b, X, y, weights, j)
@@ -99,11 +100,13 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
 def update_alpha(beta, X, y, weights):
     # Run logistic regression on current integer scores
 
+    ###?? X_train
     # Calculate scores - ignores intercept
     zi = np.dot(X[:,1:], beta[1:])
 
     # Runs logistic regression and finds alpha and beta_0
     lr_mod = LogisticRegression(penalty="none")
+    ###?? y_train
     lr_res = lr_mod.fit(np.reshape(zi, (-1,1)), y, weights)
     new_coef = lr_res.coef_.flatten()
     alpha = new_coef[0]
@@ -115,10 +118,12 @@ def update_alpha(beta, X, y, weights):
 def coord_desc_nll(data, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5):
     # Runs coordinate descent on algorithm from starting point alpha beta
     
+    ###?? Need to be change to X_train?
     X = data['X']
     n = X.shape[0]
     weights = data['sample_weights'].flatten()
     
+    ###?? y_train?
     ytemp = data['Y']
     y = np.zeros(shape=(n))
     for i in range(n):

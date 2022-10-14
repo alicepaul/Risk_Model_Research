@@ -11,7 +11,7 @@ import os
 import riskslim
 import time
 import sys
-import NLL_coordinate_descent as ncd
+
 
 # results dataframe and excel sheets
 column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "non-zeros", "med_abs", "max_abs", "time"]
@@ -60,7 +60,7 @@ def run_experiments(my_path):
     files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
     res = pd.DataFrame(columns = column_names)
-    #writer = pd.ExcelWriter(os.path.join(my_path,"res_coef.xlsx"), mode='a', if_sheet_exists='replace')
+    writer = pd.ExcelWriter(os.path.join(my_path,"res_coef.xlsx"), mode='a', if_sheet_exists='replace')
 
     # iterate through files
     i = 1
@@ -120,8 +120,7 @@ def run_experiments(my_path):
         s5 = time.time()
         alpha = max(np.abs(coef_lr[1:]))/10.0 # bring within range
         coef_cd = mtds.round_coef(coef_lr, alpha)
-        ### NEW: changed cd to ncd.
-        alpha_cd, coef_cd = ncd.coord_desc(data, 1.0/alpha, coef_cd)
+        alpha_cd, coef_cd = cd.coord_desc(data, 1.0/alpha, coef_cd)
         t5 = time.time()
         res = record_measures(res, data, f, n, p, "CD", coef_cd, alpha_cd, t5-s5+t2-s2+t3-s3)
         #coef_df["Round_Med"] = coef_med
@@ -132,8 +131,8 @@ def run_experiments(my_path):
         
         
     res.to_csv(os.path.join(my_path,"results.csv"), index=False)
-    #writer.save()
-    #writer.close()
+    # writer.save()
+    # writer.close()
 
 
 if __name__ == "__main__":
