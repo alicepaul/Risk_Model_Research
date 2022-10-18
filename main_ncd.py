@@ -20,7 +20,10 @@ column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "lambd
 
 
 def get_metrics(data, coef, alpha = 1.0):
-
+    
+    # replace -inf in coef to approximate real number 
+    coef = np.nan_to_num(coef)
+    
     v = np.dot(alpha*data['X'], coef)
     v = v.astype(np.float128)
     v = np.clip(v, -709.78, 709.78)
