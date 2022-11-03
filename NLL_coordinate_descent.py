@@ -94,6 +94,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
     obj_0 = obj_f_nll(alpha, beta_0, X, y, weights, l0)
     if obj_a < obj_b and obj_a < obj_0:
         return beta_a
+    #should be else????
     elif obj_0 < obj_a and obj_0 < obj_b:
         return beta_0
     return beta_b
@@ -103,7 +104,7 @@ def bisec_search(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0):
 def update_alpha(beta, X, y, weights):
     # Run logistic regression on current integer scores
 
-    ###?? X_train
+   
     # Calculate scores - ignores intercept
     zi = np.dot(X[:,1:], beta[1:])
 
