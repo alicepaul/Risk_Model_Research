@@ -222,7 +222,14 @@ load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
                     return(data)
 }
 
-
+round_coef<- function(coef, alpha = 1.0)
+{
+  coef_new <- coef/alpha
+  coef_new <- round(coef_new)
+  coef_new[1] = coef[1]/alpha
+  return(coef_new)
+}
+  
 
 
 #data <- load_data_from_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/breastcancer_data.csv',
@@ -230,17 +237,19 @@ load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
 
 data_bank <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/bank_data.csv', sep=',')
 
+data <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/tbrisk_data.csv', sep=',')
+
 # set Y
 Y_col_idx <- 1
-Y <- data_bank[, Y_col_idx, drop=FALSE]
-data_headers <- list(colnames(data_bank))
+Y <- data[, Y_col_idx, drop=FALSE]
+data_headers <- list(colnames(data))
 Y_name <- data_headers[[Y_col_idx]][1]
 Y[Y == 0] <- 0
 
 #set X
 X_features <- list()
 # set up x
-for (j in(colnames(data_bank)))
+for (j in(colnames(data)))
 {
   if ( (j != Y_col_idx))
   {
@@ -248,7 +257,7 @@ for (j in(colnames(data_bank)))
   }
 }
 X_features <- X_features[-1]
-X <- data_bank[unlist(X_features)]
+X <- data[unlist(X_features)]
 variable_names <- X_features
 
 #set intercept
@@ -260,13 +269,13 @@ variable_names <- append('intercept', variable_names)
 sample_weights <-rep(1,nrow(X))
 
 # concate X, Y, weight
-data_bank <- cbind(X,Y,sample_weights)
+data <- cbind(X,Y,sample_weights)
 
 # split
 set.seed(42)
-sample <- sample.split(data_bank$sign_up, SplitRatio = 0.75)
-train  <- subset(data_bank, sample == TRUE)
-test   <- subset(data_bank, sample == FALSE)
+sample <- sample.split(data$tb, SplitRatio = 0.75)
+train  <- subset(data, sample == TRUE)
+test   <- subset(data, sample == FALSE)
 
 X_train <- train[unlist(X_features)]
 y_train <- train[,ncol(train)-1, drop=FALSE]
@@ -281,14 +290,16 @@ variable_name_test <- variable_names
 # define lambda0
 lambda0 = logspace(-6, -1, 7)
 
-Y <- as.factor(train$Y)
-y_train_1 <- as.factor(y_train)
+Y <- as.factor(train$tb)
+y_train_1 <- as.factor(y_train$tb)
 # start computing
 for (i in range(lambda0))
 {
-  logistic_model <- glm(unlist(y_train) ~ ., 
-                        data =cbind(y_train, X_train), weights = unlist(sample_weights_train),
+  logistic_model <- glm(y_train_1 ~female+hiv_neg+diabetes+ever_smoke+past_tb+num_symptoms+two_weeks_symp
+                        +age_1525+age_2535+age_3545+age_4555+age_5599,
+                        data =train, weights = unlist(sample_weights_train),
                         family = "binomial")
-  coef_lr <- coef(summary(logistic_model))
-  
+  coef_lr <- coef(logistic_model)
+  alpha <- max(abs(coef_lr[3:length(coef_lr)]))/10.0
+  alpha_ncd_and_coef_ncd <- ncd.coord_desc_nll(data_train, 1.0/alpha, coef_ncd, lambda0[i])
 }
