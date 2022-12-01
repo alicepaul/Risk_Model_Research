@@ -5,6 +5,7 @@ library(tidyverse)
 library(tibble)
 library(caTools)
 library(pracma)
+library(data.table)
 # Calculates partial derivative for beta_j in logistic regression with
 # l0 is L0 penalization, alpha*beta are current coefficients
 # Partial derivative only on NLL
@@ -98,7 +99,7 @@ update_alpha <- function(beta, X, y, weights)
                   # Run logistic regression on current integer scores
                   # Calculate scores - ignores intercept
                   #??? 
-                  zi <- X[,2:ncol(X)] %*% beta[2:length(beta)]
+                  zi <- X[,1:ncol(X)] %*% beta[1:length(beta)]
 
                   # Runs logistic regression and finds alpha and beta_0
                   # using glm.fit?
@@ -107,17 +108,17 @@ update_alpha <- function(beta, X, y, weights)
                   #lr_summary <- summary(lr_mod)
                   intercept_value <- coef_all[1]
                   alpha <- coef_all[2]
-                  beta[0] <- intercept_value / alpha
+                  beta[1] <- intercept_value / alpha
 
-                  return (alpha, beta)
+                  return (list(alpha, beta))
 }
 
-coord_desc_nll<- function(data, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5)
+coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5)
 {
-                  X <- data$X
-                  #n <- nrow(X)
-                  weights <- data$sample_weights.flatten()
-                  ytemp <- data$y
+                  X <- X_train
+                  n <- nrow(X)
+                  weights <- sample_weights_train
+                  ytemp <- y_train
                   y <- rep(0, length(X))
                   for (i in n)
                   {
@@ -146,7 +147,7 @@ coord_desc_nll<- function(data, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5
                   }
                   iters <- iters+1
                   
-                  return(alpha, beta)
+                  return(list(alpha, beta))
     
   
   
@@ -171,9 +172,11 @@ load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
                   
                   # setup Y vector and Y_name
                   Y_col_idx <- 1
-                  Y <- df[, Y_col_idx]
+                  Y <- df[, Y_col_idx, drop=FALSE]
                   Y_name <- data_headers[[Y_col_idx]][1]
-                  Y[Y == 0] <- -1
+                  # Different from python code, they coded to -1
+                  #Y[Y == 0] <- 0
+                  
                   
                   X_features <- list()
                   # set up x
@@ -188,15 +191,6 @@ load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
                   
                   X <- df[unlist(X_features)]
                   variable_names <- X_features
-                  #for (j in X_features)
-                  #{
-                    #variable_names <- append(variable_names,data_headers[j])
-                  #}
-                  
-                  # insert a column of ones to X for the intercept
-                  intercept <- rep(1,nrow(X))
-                  X <- as.data.frame(cbind(intercept,X))
-                  variable_names <- append('intercept', variable_names)
                   
                   if (file.exists(sample_weights_csv_file) == FALSE)
                   {
@@ -211,95 +205,68 @@ load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
                     }
                       
                     sample_weights <- read.csv(sample_weights_csv_file, header=FALSE, sep=',')
-                    
+                  
                     data <- list(
                       'X'= X,
                       'Y'= Y,
-                      'variable_names'= variable_names,
-                      'outcome_name'= Y_name,
+                      #'variable_names'= variable_names,
+                      #'outcome_name'= Y_name,
                       'sample_weights'= sample_weights
                     )
-                    return(data)
+                    #return(list(X=X, Y=Y, variable_names=variable_names, outcome_name=outcome_name,
+                                #sample_weights=sample_weights))
+                    return(list(data=data, X=X,Y=Y,sample_weights=sample_weights))
 }
 
 round_coef<- function(coef, alpha = 1.0)
 {
-  coef_new <- coef/alpha
+  coef_new <- coef
+  coef_new <- coef_new/as.numeric(alpha)
   coef_new <- round(coef_new)
-  coef_new[1] = coef[1]/alpha
+  coef_new[1] <- coef[1]/alpha
   return(coef_new)
 }
   
 
 
-#data <- load_data_from_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/breastcancer_data.csv',
-                          # '/Users/zhaotongtong/Desktop/Risk_Model_Research/data/breastcancer_weights.csv')
+data_breast <- load_data_from_csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/breastcancer_data.csv',
+                          '/Users/zhaotongtong/Desktop/Risk_Model_Research/data/breastcancer_weights.csv')
 
-data_bank <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/bank_data.csv', sep=',')
 
-data <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/tbrisk_data.csv', sep=',')
+#data<- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/bank_data.csv', sep=',')
 
-# set Y
-Y_col_idx <- 1
-Y <- data[, Y_col_idx, drop=FALSE]
-data_headers <- list(colnames(data))
-Y_name <- data_headers[[Y_col_idx]][1]
-Y[Y == 0] <- 0
+#data <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/tbrisk_data.csv', sep=',')
 
-#set X
-X_features <- list()
-# set up x
-for (j in(colnames(data)))
-{
-  if ( (j != Y_col_idx))
-  {
-    X_features <- append(X_features,j)
-  }
-}
-X_features <- X_features[-1]
-X <- data[unlist(X_features)]
-variable_names <- X_features
-
-#set intercept
-intercept <- rep(1,nrow(X))
-X <- as.data.frame(cbind(intercept,X))
-variable_names <- append('intercept', variable_names)
-
-# set weight file
-sample_weights <-rep(1,nrow(X))
-
-# concate X, Y, weight
-data <- cbind(X,Y,sample_weights)
 
 # split
 set.seed(42)
-sample <- sample.split(data$tb, SplitRatio = 0.75)
-train  <- subset(data, sample == TRUE)
-test   <- subset(data, sample == FALSE)
-
-X_train <- train[unlist(X_features)]
-y_train <- train[,ncol(train)-1, drop=FALSE]
-X_test <- test[unlist(variable_names)]
-y_test <- test[,ncol(test)-1, drop=FALSE]
+train_ids <- sample(1:nrow(data_breast$X), floor(0.75*nrow(data_breast$X)), replace=FALSE)
+data <- as.data.frame(data_breast$data)
+train <- data[train_ids, ]
+test <- data[-train_ids,]
+X_train <- train[,1:(ncol(train)-2)]
+y_train <- train[,(ncol(train)-1), drop=FALSE]
+X_test <- test[,1:(ncol(train)-2)]
+y_test <- test[,(ncol(test)-1), drop=FALSE]
 sample_weights_train <- train[,ncol(train), drop=FALSE]
 sample_weights_test <- test[,ncol(test), drop=FALSE]
-
-variable_name_train <- variable_names
-variable_name_test <- variable_names
 
 # define lambda0
 lambda0 = logspace(-6, -1, 7)
 
-Y <- as.factor(train$tb)
-y_train_1 <- as.factor(y_train$tb)
 # start computing
 for (i in range(lambda0))
 {
-  logistic_model <- glm(y_train_1 ~female+hiv_neg+diabetes+ever_smoke+past_tb+num_symptoms+two_weeks_symp
-                        +age_1525+age_2535+age_3545+age_4555+age_5599,
-                        data =train, weights = unlist(sample_weights_train),
+  logistic_model <- glm(train$Benign~.,
+                        data = train,
+                        weights = train$V1,
                         family = "binomial")
   coef_lr <- coef(logistic_model)
+  coef_lr[is.na(coef_lr )] <- 0
+  coef_lr <- as.numeric(coef_lr)
+  coef_ncd <- round_coef(coef_lr, alpha)
   alpha <- max(abs(coef_lr[3:length(coef_lr)]))/10.0
-  alpha_ncd_and_coef_ncd <- ncd.coord_desc_nll(data_train, 1.0/alpha, coef_ncd, lambda0[i])
+  res <- coord_desc_nll(X_train, y_train, sample_weights_train, 1.0/alpha, coef_ncd, 0.006) #lambda0[i]
+  alpha_ncd <-res[1]
+  coef_ncd <- res[2]
 }
