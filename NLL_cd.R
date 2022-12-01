@@ -14,6 +14,7 @@ par_deriv_nll <- function(alpha, beta, X, y, weights, j)
                     n <- nrow(X)
                     # Partial derivate for loss
                     # weights = data_weight
+                    print(length(X[,j]))
                     pd_1 <- alpha * (weights %*% (y * X[,j]))
                     pr <- exp(alpha * (X %*% beta))
                     pr <- pr / (1.0 + pr)
@@ -30,7 +31,10 @@ obj_f_nll <- function(alpha, beta, X, y, weights, l0)
 { 
               n <- nrow(X)
               # Calculate probs
+              print(dim(X))
+              print(length(beta))
               v <- alpha * (X %*% beta)
+            
               obj_1 <- weights %*% (y * v)
               obj_2 <- weights %*% log(1 + exp(v))
               minimize_j_nll <- (-1.0/n) * (obj_1-obj_2) + l0 * sum((beta!=0))
@@ -99,7 +103,7 @@ update_alpha <- function(beta, X, y, weights)
                   # Run logistic regression on current integer scores
                   # Calculate scores - ignores intercept
                   #??? 
-                  zi <- X[,1:ncol(X)] %*% beta[1:length(beta)]
+                  zi <- X[,2:ncol(X)] %*% beta[2:length(beta)]
 
                   # Runs logistic regression and finds alpha and beta_0
                   # using glm.fit?
@@ -117,10 +121,11 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
 {
                   X <- X_train
                   n <- nrow(X)
-                  weights <- sample_weights_train
-                  ytemp <- y_train
-                  y <- rep(0, length(X))
-                  for (i in n)
+                  weights <- sample_weights_train[[1]]
+                  ytemp <- y_train[[1]]
+   
+                  y <- rep(0, n)
+                  for (i in (1:n))
                   {
                     if (ytemp[i] == 1)
                     {
@@ -129,7 +134,8 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
                   }
                   p <- ncol(X)
                   iters <- 0
-                  while (iters < max_iter)
+                  #while (iters < max_iter)
+                  while (iters < 1)
                   {
                     old_beta <- copy(beta)
                   }
@@ -155,7 +161,7 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
                 
   
   
-load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file)
+load_data_from_csv <- function(dataset_csv_file, sample_weights_csv_file=NULL)
 {
                   dataset_csv_file <- dataset_csv_file
                   if (file.exists(dataset_csv_file) == FALSE)
@@ -238,7 +244,7 @@ data_breast <- load_data_from_csv('/Users/zhaotongtong/Desktop/Risk_Model_Resear
 #data <- read.csv('/Users/zhaotongtong/Desktop/Risk_Model_Research/data/tbrisk_data.csv', sep=',')
 
 
-# split
+# split coded into a function?
 set.seed(42)
 train_ids <- sample(1:nrow(data_breast$X), floor(0.75*nrow(data_breast$X)), replace=FALSE)
 data <- as.data.frame(data_breast$data)
@@ -255,18 +261,18 @@ sample_weights_test <- test[,ncol(test), drop=FALSE]
 lambda0 = logspace(-6, -1, 7)
 
 # start computing
-for (i in range(lambda0))
-{
+for (i in lambda0){
+  print(i)
   logistic_model <- glm(train$Benign~.,
                         data = train,
                         weights = train$V1,
                         family = "binomial")
   coef_lr <- coef(logistic_model)
-  coef_lr[is.na(coef_lr )] <- 0
+  coef_lr[is.na(coef_lr)] <- 0
   coef_lr <- as.numeric(coef_lr)
-  coef_ncd <- round_coef(coef_lr, alpha)
+  coef_ncd <- round_coef(coef_lr, alpha=alpha)
   alpha <- max(abs(coef_lr[3:length(coef_lr)]))/10.0
-  res <- coord_desc_nll(X_train, y_train, sample_weights_train, 1.0/alpha, coef_ncd, 0.006) #lambda0[i]
+  res <- coord_desc_nll(X_train, y_train, sample_weights_train, 1.0/alpha, coef_ncd, i) 
   alpha_ncd <-res[1]
   coef_ncd <- res[2]
 }
