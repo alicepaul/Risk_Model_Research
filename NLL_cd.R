@@ -12,11 +12,18 @@ library(data.table)
 par_deriv_nll <- function(alpha, beta, X, y, weights, j)
 {
                     n <- nrow(X)
+                    
                     # Partial derivate for loss
                     # weights = data_weight
-                    print(length(X[,j]))
+                    # need to transform X, y to a numeric/matrix format
+                    X <- as.matrix(X)
+                    y <- as.numeric(unlist(y))
+                    beta <- as.numeric(unlist(beta))
+                    weights <- as.numeric(unlist(weights))
                     pd_1 <- alpha * (weights %*% (y * X[,j]))
-                    pr <- exp(alpha * (X %*% beta))
+                    # not sure if the beta here need include coef of weights, 
+                    # if not use 2:length-1
+                    pr <- exp(alpha * (X %*% beta[2:(length(beta)-1)]))
                     pr <- pr / (1.0 + pr)
                     pd_2 <- alpha * (weights %*% (X[,j] * pr))
                     #partial derivative
@@ -30,10 +37,12 @@ par_deriv_nll <- function(alpha, beta, X, y, weights, j)
 obj_f_nll <- function(alpha, beta, X, y, weights, l0)
 { 
               n <- nrow(X)
+              X <- as.matrix(X)
+              y <- as.numeric(unlist(y))
+              beta <- as.numeric(unlist(beta))
+              weights <- as.numeric(unlist(weights))
               # Calculate probs
-              print(dim(X))
-              print(length(beta))
-              v <- alpha * (X %*% beta)
+              v <- alpha * (X %*% beta[2:(length(beta)-1)])
             
               obj_1 <- weights %*% (y * v)
               obj_2 <- weights %*% log(1 + exp(v))
@@ -43,14 +52,13 @@ obj_f_nll <- function(alpha, beta, X, y, weights, l0)
 bisec_search <- function(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0)
 { 
                   beta_a <- copy(beta)
-                  beta_a[j] <- a
+                  beta_a[[j]] <- a
                   beta_b <- copy(beta)
-                  beta_b[j] <- b
+                  beta_b[[j]] <- b
                   #NLL(0)
                   beta_0 <- rep(0, length(beta_a)) 
                   der_f_a <- par_deriv_nll(alpha, beta_a, X, y, weights, j)
                   der_f_b <- par_deriv_nll(alpha, beta_b, X, y, weights, j)
-                  
                   # Check that 0 derivative in range
                   search <- TRUE
                   if ((der_f_a > 0) | (der_f_b < 0))
@@ -84,44 +92,40 @@ bisec_search <- function(alpha, beta, X, y, weights, l0, j, a=-10, b=10, TOL=1.0
                   # Find best of b and a in objective function
                   obj_a <- obj_f_nll(alpha, beta_a, X, y, weights, l0)
                   obj_b <- obj_f_nll(alpha, beta_b, X, y, weights, l0)
-                  ### NEW : comapre NLL(b_j)+l0 < NLL(0)
+                  # comapre NLL(b_j)+l0 < NLL(0)
                   obj_0 <- obj_f_nll(alpha, beta_0, X, y, weights, l0)
-                  if ((obj_a < obj_b) & (obj_a < obj_0))
-                  {
+                  if ((obj_a < obj_b) & (obj_a < obj_0)){
                     return (beta_a)
-                  }
-                  #should be else?
-                  else #((obj_0 < obj_a) && (obj_0 < obj_b))
-                  {
-                    return (beta_0)
-                  }
+                  } else {
+                    return (beta_0)}
                   return (beta_b)
 }
 
 update_alpha <- function(beta, X, y, weights)
 {
+                  X <- as.matrix(X)
+                  y <- as.numeric(unlist(y))
+                  beta <- as.numeric(unlist(beta))
+                  weights <- as.numeric(unlist(weights)) 
                   # Run logistic regression on current integer scores
-                  # Calculate scores - ignores intercept
-                  #??? 
-                  zi <- X[,2:ncol(X)] %*% beta[2:length(beta)]
-
+                  zi <- X %*% beta[2:(length(beta)-1)]
                   # Runs logistic regression and finds alpha and beta_0
-                  # using glm.fit?
                   lr_mod <- glm(y ~ as.vector(zi), weights=weights, family="binomial")
                   coef_all <- unname(coef(lr_mod))
-                  #lr_summary <- summary(lr_mod)
                   intercept_value <- coef_all[1]
                   alpha <- coef_all[2]
                   beta[1] <- intercept_value / alpha
-
                   return (list(alpha, beta))
 }
 
-coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5)
+coord_desc_nll<- function(X,y, weights, alpha, beta, l0 = 0.0, max_iter = 100, tol= 1e-5)
 {
-                  X <- X_train
+                  X <- as.matrix(X)
+                  y <- as.numeric(unlist(y))
+                  beta <- as.numeric(unlist(beta))
+                  weights <- as.numeric(unlist(weights)) 
                   n <- nrow(X)
-                  weights <- sample_weights_train[[1]]
+                  #weights <- sample_weights_train[[1]]
                   ytemp <- y_train[[1]]
    
                   y <- rep(0, n)
@@ -134,8 +138,8 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
                   }
                   p <- ncol(X)
                   iters <- 0
-                  #while (iters < max_iter)
-                  while (iters < 1)
+                  #this while loop takes longer than expected
+                  while (iters < max_iter)
                   {
                     old_beta <- copy(beta)
                   }
@@ -144,7 +148,11 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
                   {
                     beta <- bisec_search(alpha, beta, X, y, weights, l0, j)
                     alpha <- update_alpha(beta, X, y, weights)[1]
+                    # during testing, when l0=1e-6, alpha will return NA, use 0 fill NA
+                    alpha[is.na(alpha)] <- 0
                     beta <- update_alpha(beta, X, y, weights)[2]
+                    # same thing happened here for beta
+                    beta[is.na(beta)] <- 0
                   }
                   # Check if change in beta is within tolerance to converge
                   if (max(abs(old_beta - beta)) < tol)
@@ -152,7 +160,6 @@ coord_desc_nll<- function(X_train,y_train,sample_weights_train, alpha, beta, l0 
                     break
                   }
                   iters <- iters+1
-                  
                   return(list(alpha, beta))
     
   
@@ -270,8 +277,8 @@ for (i in lambda0){
   coef_lr <- coef(logistic_model)
   coef_lr[is.na(coef_lr)] <- 0
   coef_lr <- as.numeric(coef_lr)
+  alpha <- max(abs(coef_lr[2:length(coef_lr)]))/10.0
   coef_ncd <- round_coef(coef_lr, alpha=alpha)
-  alpha <- max(abs(coef_lr[3:length(coef_lr)]))/10.0
   res <- coord_desc_nll(X_train, y_train, sample_weights_train, 1.0/alpha, coef_ncd, i) 
   alpha_ncd <-res[1]
   coef_ncd <- res[2]
