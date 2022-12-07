@@ -17,8 +17,6 @@ import sys
 # results dataframe and excel sheets
 column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "lambda0", "non-zeros", "med_abs", "max_abs", "time"]
 
-
-
 def get_metrics(data, coef, alpha = 1.0):
     
     # replace -inf in coef to approximate real number 
