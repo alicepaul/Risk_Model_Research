@@ -31,7 +31,7 @@ run_experiments <- function(my_path){
     
     # Add weights file if needed
     weights <- rep(1, nrow(X))
-    weights_file <- paste0(substr(x,1,nchar(x)-8),"_weights.csv")
+    weights_file <- paste0(substr(f,1,nchar(f)-8),"_weights.csv")
     if (file.exists(weights_file)){
       weights <- read.csv(weights_file)
       weights <- weights[[1]]
@@ -39,7 +39,8 @@ run_experiments <- function(my_path){
     
     # Run algorithm to get risk model
     t1 <- Sys.time()
-    mod <- risk_mod(X, y, weights=weights)
+    lambda0 <- cv_risk_mod(X, y, weights=weights, nfolds = 5)$lambda_min
+    mod <- risk_mod(X, y, weights=weights, lambda0 = lambda0)
     t2 <- Sys.time()
       
     # Get evaluation metrics
@@ -56,7 +57,7 @@ run_experiments <- function(my_path){
                spec = res_metrics$spec, sec = time_secs)
     results <- rbind(results, file_row)
   }
-  write.csv(results, paste0(my_path, "results_R.csv"), row.names=FALSE)
+  write.csv(results, paste0(my_path, "results_cv_R.csv"), row.names=FALSE)
 }
 
-#run_experiments("/Users/alice/Dropbox/Risk_Model_Research/data/")
+run_experiments("/Users/alice/Dropbox/Risk_Model_Research/sim_data/")

@@ -4,13 +4,13 @@ source("utils.R")
 get_metrics <- function(mod, X = NULL, y = NULL){
   #' Get metrics from beta and gamma
   #' 
-  #' Calculates accuracy, sensitivity, specificity, and auc
+  #' Calculates deviance, accuracy, sensitivity, and specificity
   #' @param mod riskMod object
   #' @param X input matrix with dimensions n x p, must match dimensions of beta
   #' in mod (default NULL)
   #' @param y numeric vector for the response variable (binomial) of length n, 
   #' (default NULL)
-  #' @return list with accuracy (acc), sensitivity (sens), and 
+  #' @return list with deviance (dev), accuracy (acc), sensitivity (sens), and 
   #' specificity (spec), 
   
   # Check if new data
@@ -31,6 +31,9 @@ get_metrics <- function(mod, X = NULL, y = NULL){
   p <- exp(v)/(1+exp(v))
   pred <- ifelse(p>=0.5, 1, 0)
   
+  # Deviance
+  dev <- -2*sum(y*log(p)+(1-y)*log(1-p))
+  
   # Confusion matrix
   tp <- sum(pred == 1 & y == 1)
   tn <- sum(pred == 0 & y == 0)
@@ -42,5 +45,5 @@ get_metrics <- function(mod, X = NULL, y = NULL){
   sens <- tp/(tp+fn)
   spec <- tn/(tn+fp)
   
-  return(list(acc=acc, sens=sens, spec=spec))
+  return(list(dev = dev, acc=acc, sens=sens, spec=spec))
 }

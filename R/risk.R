@@ -1,18 +1,21 @@
 source("utils.R")
-source("riskmod_class.R")
+source("helper_functions.R")
+library(tidyverse) 
 
+# Update documentation
+
+#' Partial derivative of the negative log-likelihood
+#' 
+#' Calculates the partial derivative for beta_j of the objective function
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param gamma scalar to rescale betas for prediction
+#' @param beta numeric vector with p coefficients 
+#' @param weights numeric vector of length n with weights for each 
+#' observation
+#' @param j index of beta
+#' @return the numeric partial derivative value
 par_deriv <- function(X, y, gamma, beta, weights, j) {
-  #' Partial derivative of the negative log-likelihood
-  #' 
-  #' Calculates the partial derivative for beta_j of the objective function
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param gamma scalar to rescale betas for prediction
-  #' @param beta numeric vector with p coefficients 
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation
-  #' @param j index of beta
-  #' @return the numeric partial derivative value
   
   # Calculate partial derivative for NLL
   pd_1 <- sum(gamma * weights * (y * X[,j]))
@@ -23,19 +26,18 @@ par_deriv <- function(X, y, gamma, beta, weights, j) {
   return(nll_pd)
 }
 
-
+#' Objective function for NLL+penalty
+#' 
+#' Calculates the objective function for gamma, beta (NLL+penalty)
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param gamma scalar to rescale betas for prediction
+#' @param beta numeric vector with p coefficients 
+#' @param weights numeric vector of length n with weights for each 
+#' observation
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @return numeric objective function value
 obj_fcn <- function(X, y, gamma, beta, weights, lambda0=0) {
-  #' Objective function for NLL+penalty
-  #' 
-  #' Calculates the objective function for gamma, beta (NLL+penalty)
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param gamma scalar to rescale betas for prediction
-  #' @param beta numeric vector with p coefficients 
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation
-  #' @param lambda0 penalty coefficient for L0 term (default 0)
-  #' @return numeric objective function value
 
   # Calculate partial derivative for NLL
   v <- gamma * (X %*% beta)
@@ -48,23 +50,23 @@ obj_fcn <- function(X, y, gamma, beta, weights, lambda0=0) {
   return (nll_fcn + pen_fcn)
 }
 
+#' Bisection search for coordinate descent
+#' 
+#' Returns optimal value on beta_j using bisection search
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param gamma scalar to rescale betas for prediction
+#' @param beta numeric vector with p coefficients 
+#' @param weights numeric vector of length n with weights for each 
+#' observation
+#' @param j index of beta
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @param a integer lower bound for beta_j (default -10)
+#' @param b integer upper bound for beta_j (default 10)
+#' @return numeric vector beta with optimal value for beta[j] updated
 bisec_search <- function(X, y, gamma, beta, weights, j, lambda0 = 0, 
                          a = -10, b = 10) {
-  #' Bisection search for coordinate descent
-  #' 
-  #' Returns optimal value on beta_j using bisection search
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param gamma scalar to rescale betas for prediction
-  #' @param beta numeric vector with p coefficients 
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation
-  #' @param j index of beta
-  #' @param lambda0 penalty coefficient for L0 term (default 0)
-  #' @param a integer lower bound for beta_j (default -10)
-  #' @param b integer upper bound for beta_j (default 10)
-  #' @return numeric vector beta with optimal value for beta[j] updated
- 
+  
   # Initial betas to compare
   beta_a <- beta
   beta_a[j] <- a
@@ -120,16 +122,16 @@ bisec_search <- function(X, y, gamma, beta, weights, j, lambda0 = 0,
   return (beta_b)
 }
 
+#' Update gamma and beta[1]
+#' 
+#' Finds optimal gamma value and intercept
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param beta numeric vector with p coefficients 
+#' @param weights numeric vector of length n with weights for each 
+#' observation
+#' @return gamma and beta (with updated beta[1] value) in a list
 update_gamma_intercept <- function(X, y, beta, weights) {
-  #' Update gamma and beta[1]
-  #' 
-  #' Finds optimal gamma value and intercept
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param beta numeric vector with p coefficients 
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation
-  #' @return gamma and beta (with updated beta[1] value) in a list
   
   # Calculate current integer scores and run logistic regression
   z <- X %*% beta - beta[1]*X[,1]
@@ -143,23 +145,23 @@ update_gamma_intercept <- function(X, y, beta, weights) {
   return (list(gamma=gamma, beta=beta))
 }
 
+#' Coordinate descent to find the optimal risk model
+#' 
+#' Returns the estimated gamma and beta for the risk score model
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param gamma scalar to rescale betas for prediction
+#' @param beta numeric vector with p coefficients 
+#' @param weights numeric vector of length n with weights for each 
+#' observation
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @param a integer lower bound for betas (default -10)
+#' @param b integer upper bound for betas (default 10)
+#' @param max_iters maximum number of iterations (default 100)
+#' @param tol tolerance for convergence
+#' @return optimal gamma (numeric) and beta (numeric vector) as a list
 risk_coord_desc <- function(X, y, gamma, beta, weights, lambda0 = 0, 
                             a = -10, b = 10, max_iters = 100, tol= 1e-5) {
-  #' Coordinate descent to find the optimal risk model
-  #' 
-  #' Returns the estimated gamma and beta for the risk score model
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param gamma scalar to rescale betas for prediction
-  #' @param beta numeric vector with p coefficients 
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation
-  #' @param lambda0 penalty coefficient for L0 term (default 0)
-  #' @param a integer lower bound for betas (default -10)
-  #' @param b integer upper bound for betas (default 10)
-  #' @param max_iters maximum number of iterations (default 100)
-  #' @param tol tolerance for convergence
-  #' @return optimal gamma (numeric) and beta (numeric vector) as a list
   
   # Run for maximum number of iterations
   iters <- 1
@@ -194,29 +196,29 @@ risk_coord_desc <- function(X, y, gamma, beta, weights, lambda0 = 0,
   return(list(gamma=gamma, beta=beta))
 }
 
+#' Risk model estimation
+#' 
+#' Returns the estimated gamma and beta for the risk score model along
+#' with a glm object with the corresponding coefficients
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param gamma starting value to rescale betas for prediction (default NULL)
+#' @param beta startubg numeric vector with p coefficients (default NULL)
+#' @param weights numeric vector of length n with weights for each 
+#' observation (defult NULL - will give equal weights)
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @param a integer lower bound for betas (default -10)
+#' @param b integer upper bound for betas (default 10)
+#' @param max_iters maximum number of iterations (default 100)
+#' @param tol tolerance for convergence
+#' @return optimal gamma (numeric) and beta (numeric vector) and corresponding
+#' glm object (mod) as a list
 risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL, 
                      lambda0 = 0, a = -10, b = 10, max_iters = 100, tol= 1e-5) {
-  #' Risk model estimation
-  #' 
-  #' Returns the estimated gamma and beta for the risk score model along
-  #' with a glm object with the corresponding coefficients
-  #' @param X input matrix with dimension n x p, every row is an observation
-  #' @param y numeric vector for the response variable (binomial)
-  #' @param gamma scalar to rescale betas for prediction (default NULL)
-  #' @param beta numeric vector with p coefficients (default NULL)
-  #' @param weights numeric vector of length n with weights for each 
-  #' observation (defult NULL - will give equal weights)
-  #' @param lambda0 penalty coefficient for L0 term (default 0)
-  #' @param a integer lower bound for betas (default -10)
-  #' @param b integer upper bound for betas (default 10)
-  #' @param max_iters maximum number of iterations (default 100)
-  #' @param tol tolerance for convergence
-  #' @return optimal gamma (numeric) and beta (numeric vector) and corresponding
-  #' glm object (mod) as a list
   
   # Weights
   if (is.null(weights))
-    weights <- rep.int(1, nrow(X))
+    weights <- rep(1, nrow(X))
   
   # If initial gamma is null but have betas then use update function
   if (is.null(gamma) & (!is.null(beta))){
@@ -225,7 +227,7 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
     beta <- upd$beta
   }
   
-  # Initial gamma is null then round LR coefficients using median 
+  # Initial beta is null then round LR coefficients using median 
   if (is.null(beta)){
     # Initial model 
     init_mod <- glm(y~X-1, family = "binomial", weights = weights)
@@ -247,6 +249,8 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   if (is.na(gamma) | sum(is.na(beta)) > 0){
     stop("Initial gamma or beta is NA - check starting value for beta")
   }
+  if (length(beta) != ncol(X)) stop("beta and X non-compatible")
+  if (length(y) != nrow(X)) stop("y and X non-compatible")
 
   # Run coordinate descent from initial solution
   res <- risk_coord_desc(X, y, gamma, beta, weights, lambda0, a, b, max_iters,
@@ -262,6 +266,87 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
                  lambda0 = lambda0)
   class(mod) <- "risk_mod"
   return(mod)
+}
+
+#' Cross-Validation to set lambda0
+#' 
+#' Runs k-fold cross-validation and records class accuracy and deviance
+#' @param X input matrix with dimension n x p, every row is an observation
+#' @param y numeric vector for the response variable (binomial)
+#' @param weights numeric vector of length n with weights for each 
+#' observation (defult NULL - will give equal weights)
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @param a integer lower bound for betas (default -10)
+#' @param b integer upper bound for betas (default 10)
+#' @param max_iters maximum number of iterations (default 100)
+#' @param tol tolerance for convergence
+#' @param lambda0 optional sequence of lambda values (default NULL)
+#' @param nfolds number of folds, implied if foldids provided (default 10)
+#' @param foldids optional vector of values between 1 and nfolds (default NULL)
+#' @return class of cv_risk_mod with a list containing a data.frame of results
+#' along with the lambda_min and lambda_1se
+cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
+                        tol= 1e-5, lambda0 = NULL, nfolds = 10, 
+                        foldids = NULL) {
+  # Get folds 
+  if (is.null(foldids) & is.null(nfolds)) stop("Must provide foldids or nfolds")
+  if (is.null(foldids)){
+    foldids <- sample(rep(seq(nfolds), length = nrow(X)))
+  } else {
+    nfolds <- max(foldids)
+  }
+  
+  # Check at least 3 folds
+  if (nfolds <= 3) stop("Must have more than 3 folds")
+  
+  # Get lambda sequence
+  if (is.null(lambda0)){
+    lambda0 <- exp(seq(-6,-2, 0.5)) 
+  }
+  num_lambda0 <- length(lambda0)
+  if (num_lambda0 < 2) stop("Need at least two values for lambda0")
+
+  # Results data frame
+  res_df <- data.frame(lambda0 = rep(lambda0, nfolds*num_lambda0),
+                       fold = sort(rep(1:nfolds, num_lambda0)),
+                       dev = rep(0, nfolds*num_lambda0),
+                       acc = rep(0, nfolds*num_lambda0), 
+                       non_zeros = rep(0, nfolds*num_lambda0))
+  
+  # Function to run for single fold and lambda0
+  fold_fcn <- function(l0, foldid){
+    X_train <- X[foldids != foldid, ]
+    y_train <- y[foldids != foldid]
+    weight_train <- weights[foldids != foldid]
+    mod <- risk_mod(X_train, y_train, gamma = NULL, beta = NULL, 
+                    weights = weight_train, lambda0 = l0, a = a, b = b, 
+                    max_iters = max_iters, tol= 1e-5)
+    res <- get_metrics(mod, X[foldids == foldid,], y[foldids == foldid])
+    non_zeros <- sum(mod$beta != 0)
+    return(c(res$dev, res$acc, non_zeros))
+  }
+  
+  # Run through all folds
+  res_df[,3:5] <- sapply(1:nrow(res_df), 
+                         function(i) fold_fcn(res_df$lambda0[i], 
+                                              res_df$fold[i]))
+  
+  # Summarize 
+  res_df <- res_df %>%
+    group_by(lambda0) %>%
+    summarize(mean_dev = mean(dev), sd_dev = sd(dev),
+              mean_acc = mean(acc), sd_acc = sd(acc))
+  
+  # Find lambda_min and lambda1_se for deviance
+  lambda_min_ind <- which.min(res_df$mean_dev)
+  lambda_min <- res_df$lambda0[lambda_min_ind]
+  min_dev_1se <- res_df$mean_dev[lambda_min_ind] + 
+    res_df$sd_dev[lambda_min_ind] 
+  lambda_1se <- res_df$lambda0[max(which(res_df$mean_dev <= min_dev_1se))]
+  
+  cv_obj <- list(results = res_df, lambda_min = lambda_min, lambda_1se)
+  class(cv_obj) <- "cv_risk_mod"
+  return(cv_obj)
 }
 
 
