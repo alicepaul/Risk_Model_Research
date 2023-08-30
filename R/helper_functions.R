@@ -1,7 +1,7 @@
 # Class functions for riskMod object
 source("utils.R")
 
-get_metrics <- function(mod, X = NULL, y = NULL){
+get_metrics <- function(mod, X = NULL, y = NULL, weights = NULL){
   #' Get metrics from beta and gamma
   #' 
   #' Calculates deviance, accuracy, sensitivity, and specificity

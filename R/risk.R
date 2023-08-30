@@ -20,7 +20,7 @@ par_deriv <- function(X, y, gamma, beta, weights, j) {
   # Calculate partial derivative for NLL
   pd_1 <- sum(gamma * weights * (y * X[,j]))
   exp_pred <- exp(clip_exp_vals(gamma * (X %*% beta)))
-  pd_2 <- sum(weights * X[,j] * (exp_pred / (1.0 + exp_pred)))
+  pd_2 <- sum(gamma*weights * X[,j] * (exp_pred / (1.0 + exp_pred)))
   nll_pd <- (-1/nrow(X))*(pd_1-pd_2)
   
   return(nll_pd)
@@ -46,7 +46,6 @@ obj_fcn <- function(X, y, gamma, beta, weights, lambda0=0) {
   
   # Penalty term for lambda0*||beta||_0 
   pen_fcn <- lambda0*sum(beta[-1] != 0) 
-  
   return (nll_fcn + pen_fcn)
 }
 
@@ -73,11 +72,11 @@ bisec_search <- function(X, y, gamma, beta, weights, j, lambda0 = 0,
   beta_b <- beta
   beta_b[j] <- b
   beta_0 <- beta
-  beta[j] <- 0
-  
+  beta_0[j] <- 0
+
   # If no zero derivative in range, skip while loop
   der_a <- par_deriv(X, y, gamma, beta_a, weights, j)
-  der_b <- par_deriv(X, y, gamma, beta_a, weights, j)
+  der_b <- par_deriv(X, y, gamma, beta_b, weights, j)
   search <- TRUE
   if (sign(der_a) == sign(der_b)) search <- FALSE
 
@@ -140,6 +139,9 @@ update_gamma_intercept <- function(X, y, beta, weights) {
   # Find gamma and beta[1]
   coef_vec <- unname(coef(lr_mod))
   gamma <- coef_vec[2]
+  if (is.na(gamma)){
+    gamma <- 1
+  }
   beta[1] <- coef_vec[1] / gamma
 
   return (list(gamma=gamma, beta=beta))
@@ -176,7 +178,7 @@ risk_coord_desc <- function(X, y, gamma, beta, weights, lambda0 = 0,
       upd <- update_gamma_intercept(X, y, beta, weights)
       gamma <- upd$gamma
       beta <- upd$beta
-      
+
       # Check for NaN
       if (is.nan(gamma) | sum(is.nan(beta)) > 0){
         stop("Algorithm did not converge - encountered NaN")
@@ -203,7 +205,7 @@ risk_coord_desc <- function(X, y, gamma, beta, weights, lambda0 = 0,
 #' @param X input matrix with dimension n x p, every row is an observation
 #' @param y numeric vector for the response variable (binomial)
 #' @param gamma starting value to rescale betas for prediction (default NULL)
-#' @param beta startubg numeric vector with p coefficients (default NULL)
+#' @param beta starting numeric vector with p coefficients (default NULL)
 #' @param weights numeric vector of length n with weights for each 
 #' observation (defult NULL - will give equal weights)
 #' @param lambda0 penalty coefficient for L0 term (default 0)
@@ -251,7 +253,7 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   }
   if (length(beta) != ncol(X)) stop("beta and X non-compatible")
   if (length(y) != nrow(X)) stop("y and X non-compatible")
-
+  #print(beta)
   # Run coordinate descent from initial solution
   res <- risk_coord_desc(X, y, gamma, beta, weights, lambda0, a, b, max_iters,
                          tol)
@@ -327,10 +329,9 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   }
   
   # Run through all folds
-  res_df[,3:5] <- sapply(1:nrow(res_df), 
+  res_df[,3:5] <- t(sapply(1:nrow(res_df), 
                          function(i) fold_fcn(res_df$lambda0[i], 
-                                              res_df$fold[i]))
-  
+                                              res_df$fold[i])))
   # Summarize 
   res_df <- res_df %>%
     group_by(lambda0) %>%
@@ -344,7 +345,8 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
     res_df$sd_dev[lambda_min_ind] 
   lambda_1se <- res_df$lambda0[max(which(res_df$mean_dev <= min_dev_1se))]
   
-  cv_obj <- list(results = res_df, lambda_min = lambda_min, lambda_1se)
+  cv_obj <- list(results = res_df, lambda_min = lambda_min, 
+                 lambda_1se =lambda_1se)
   class(cv_obj) <- "cv_risk_mod"
   return(cv_obj)
 }

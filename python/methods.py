@@ -5,6 +5,23 @@ from sklearn.linear_model import LogisticRegression
 from statistics import median
 import os
 import riskslim
+from fasterrisk.fasterrisk import RiskScoreOptimizer
+
+def FR_coef(data):
+    # get data and model
+    X_train = data['X']
+    y_train = data['Y'].flatten()
+    m = RiskScoreOptimizer(X = X_train, y = y_train, k=data["X"].shape[1]-1,
+                           lb=-10, ub=10)
+
+    # perform optimization
+    m.optimize()
+
+    # get all top m solutions from the final diverse pool
+    arr_multiplier, arr_intercept, arr_coefficients = m.get_models()
+    multiplier, intercept, coefficients = m.get_models(model_index = 0)
+    coef = (intercept+coefficients)/multiplier
+    return(coef)
 
 
 def CPA_coef(data,lambda0=1e-6):

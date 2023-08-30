@@ -15,7 +15,7 @@ import sys
 
 
 # results dataframe and excel sheets
-column_names = ["data", "n", "p", "method", "acc", "sens", "spec", "auc", "lambda0", "non-zeros", "med_abs", "max_abs", "time"]
+column_names = "data, n, p, method, acc, sens, spec, auc, lambda0, non-zeros, med_abs, max_abs, time \n"
 
 def get_metrics(data, coef, alpha = 1.0):
     
@@ -50,21 +50,25 @@ def get_metrics(data, coef, alpha = 1.0):
             
     return auc, accuracy, sensitivity, specificity
     
-def record_measures(res, data, f, n, p, method, lambda0, coef, alpha, time):
+def record_measures(data, f, n, p, method, lambda0, coef, alpha, time):
     # Adds record
     measures = get_metrics(data, coef, alpha)
 
-    data = [[f, n, p, method, measures[1], measures[2], measures[3], measures[0], lambda0, np.count_nonzero(coef[1:]), median(np.abs(coef[1:])), np.max(np.abs(coef[1:])), time]]
-    new_row = pd.DataFrame(data=data, columns=column_names)
-    return(pd.concat([res, new_row], ignore_index=True))
+    res_str = f + "," + str(n) + "," + str(p) + "," + method + "," + str(measures[1]) + "," + str(measures[2]) + "," \
+    + str( measures[3]) + "," + str(measures[0])+"," + str(lambda0) + "," + str(np.count_nonzero(coef[1:]))+ "," \
+    + str(median(np.abs(coef[1:])))+","+str(np.max(np.abs(coef[1:]))) + ","+str( time) +"\n"
+    return(res_str)
 
 
 def run_experiments(my_path):
     # directory of files
     files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
-    res = pd.DataFrame(columns = column_names)
-    #writer = pd.ExcelWriter(os.path.join(my_path,"res_coef_ncd.xlsx"), engine='openpyxl', mode='a',if_sheet_exists='replace')
+    #res = pd.DataFrame(columns = column_names)
+    res_file = os.path.join(my_path,"results_ncd_fr.csv")
+    res_f = open(res_file, "w")
+    res_f.write(column_names)
+    res_f.close()
     
     # iterate through files
     i = 1
@@ -86,77 +90,65 @@ def run_experiments(my_path):
         n = data["X"].shape[0]  #rows
         p = data["X"].shape[1]-1
         weights = data["sample_weights"]
+        print(n,p)
         
-        # ### NEW: Added train test split
+        # test train split
         X_train, X_test, y_train, y_test, weights_train, weights_test = train_test_split(data['X'], data['Y'], data["sample_weights"], test_size = 0.25, random_state = 42)
-        
-        #data_train = {'X': X_train, 'Y': y_train, 'sample_weights': weights_train}
-        #data_test = {'X': X_test, 'Y': y_test, 'sample_weights': weights_test}
         data_train = {}
         data_test =  {}
-        
         data_train["X"] = X_train
         data_train["Y"] = y_train
         data_train["sample_weights"] = weights_train
         data_test["X"] = X_test
         data_test["Y"] = y_test
         data_test["sample_weights"] = weights_test
-        
-        # X+y+weight (train) = data_train
-        # same for test indicies
-        
-        # coefficient frame
-        # coef_empty = np.zeros(shape=(p+1,3))
-        # coef_df = pd.DataFrame(data=coef_empty, columns = ["Vars", "CPA","NCD"])
-        # coef_df["Vars"] = data["variable_names"]
         data_train["variable_names"] = data["variable_names"]
         data_test["variable_names"] = data["variable_names"]
         
 
 
-        lambda0 = np.logspace(-6, -1, 7)
-        for i in range(len(lambda0)):
+        #lambda0 = np.logspace(-6, -1, 7)
+        #for i in range(len(lambda0)):
+        res = ""
             
-            # cpa
-            s1 = time.time()
-            coef_cpa = mtds.CPA_coef(data_train,lambda0[i])
-            t1 = time.time()
-            res = record_measures(res, data_test, f, n, p, "CPA", lambda0[i], coef_cpa, 1.0, t1-s1)
-            #coef_df["CPA"] = coef_cpa
-            
-            # logistic regression
-            s2 = time.time()
-            coef_lr = mtds.LR_coef(data_train, weights_train.flatten())
-            t2 = time.time()
-            # res = record_measures(res, data, f, n, p, "LR", coef_lr, 1.0, t2-s2)
-            #coef_df["LR"] = coef_lr
+        # cpa
+        #s1 = time.time()
+        #coef_cpa = mtds.CPA_coef(data_train)
+        #t1 = time.time()
+        #res += record_measures(data_test, f, n, p, "CPA", 0, coef_cpa, 1.0, t1-s1)
 
-            # rounded logistic regression
-            s3 = time.time()
-            coef_rd = mtds.round_coef(coef_lr)
-            t3 = time.time()
-            # res = record_measures(res, data, f, n, p, "Round", coef_rd, 1.0, t2-s2+t3-s3)
-            #coef_df["Round"] = coef_round
+        # fr
+        s1 = time.time()
+        coef_cpa = mtds.FR_coef(data_train)
+        t1 = time.time()
+        res += record_measures(data_test, f, n, p, "FR", 0, coef_cpa, 1.0, t1-s1)
             
-            # coordinate descent from LR
-            coef_lr = mtds.LR_coef(data_train, weights_train.flatten())
-            s5 = time.time()
-            alpha = max(np.abs(coef_lr[1:]))/10.0 # bring within range
-            coef_ncd = mtds.round_coef(coef_lr, alpha)
-            ### NEW: changed cd to ncd.
-            alpha_ncd, coef_ncd = ncd.coord_desc_nll(data_train, 1.0/alpha, coef_ncd, lambda0[i])
-            t5 = time.time()
-            res = record_measures(res, data_test, f, n, p, "NLLCD", lambda0[i], coef_ncd, alpha_ncd, t5-s5+t2-s2+t3-s3) # data_test
-            #coef_df["NCD"] = coef_ncd
+        # logistic regression
+        #s2 = time.time()
+        #coef_lr = mtds.LR_coef(data_train, weights_train.flatten())
+        #t2 = time.time()
+        #res += record_measures(data_test, f, n, p, "LR", 0, coef_lr, 1.0, t2-s2)
+
+        # rounded logistic regression
+        #s3 = time.time()
+        #coef_rd = mtds.round_coef(coef_lr)
+        #t3 = time.time()
+        #res += record_measures(data_test, f, n, p, "Round", 0, coef_rd, 1.0, t2-s2+t3-s3)
             
-            # write coefficient info
-            #coef_df.to_excel(writer, sheet_name=f, index=False)
-            i += 1
+        # coordinate descent from LR
+        #coef_lr = mtds.LR_coef(data_train, weights_train.flatten())
+        #s5 = time.time()
+        #alpha = max(np.abs(coef_lr[1:]))/10.0 # bring within range
+        #coef_ncd = mtds.round_coef(coef_lr, alpha)
+        #alpha_ncd, coef_ncd = ncd.coord_desc_nll(data_train, 1.0/alpha, coef_ncd)
+        #t5 = time.time()
+        #res += record_measures(data_test, f, n, p, "NLLCD", 0, coef_ncd, alpha_ncd, t5-s5+t2-s2) # data_test
+
+        res_f = open(res_file, "a")
+        res_f.write(res)
+        res_f.close()
         
-        
-    res.to_csv(os.path.join(my_path,"results_ncd.csv"), index=False)
-    # writer.save()
-    # writer.close()
+
 
 
 if __name__ == "__main__":
