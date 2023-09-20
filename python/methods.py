@@ -20,7 +20,9 @@ def FR_coef(data):
     # get all top m solutions from the final diverse pool
     arr_multiplier, arr_intercept, arr_coefficients = m.get_models()
     multiplier, intercept, coefficients = m.get_models(model_index = 0)
-    coef = (intercept+coefficients)/multiplier
+    coef = coefficients
+    coef[0] = intercept
+    coef = coef/multiplier
     return(coef)
 
 
