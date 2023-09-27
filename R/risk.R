@@ -309,7 +309,7 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   if (num_lambda0 < 2) stop("Need at least two values for lambda0")
 
   # Results data frame
-  res_df <- data.frame(lambda0 = rep(lambda0, nfolds*num_lambda0),
+  res_df <- data.frame(lambda0 = rep(lambda0, nfolds), 
                        fold = sort(rep(1:nfolds, num_lambda0)),
                        dev = rep(0, nfolds*num_lambda0),
                        acc = rep(0, nfolds*num_lambda0), 
@@ -332,7 +332,7 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   res_df[,3:5] <- t(sapply(1:nrow(res_df), 
                          function(i) fold_fcn(res_df$lambda0[i], 
                                               res_df$fold[i])))
-  # Summarize 
+  # Summarize
   res_df <- res_df %>%
     group_by(lambda0) %>%
     summarize(mean_dev = mean(dev), sd_dev = sd(dev),
