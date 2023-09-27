@@ -5,7 +5,7 @@
 library(tidyverse)
 library(MASS) # for multinomal 
 
-sim_dat = function(n, p1,p2,p3,rho=0.5, snr=5){
+sim_dat = function(n, p1, p2, p3, rho=0.5, snr=5){
   #' Data Simulation function
   #' The data matrix x is sampled from a multivariate gaussian with exponential correlation between columns.
   #' The response y = xb + epsilon, where b is a vector with 'supp_size', defined as randomly chosen entries equal to 1 and the rest equal to 0.
@@ -22,11 +22,7 @@ sim_dat = function(n, p1,p2,p3,rho=0.5, snr=5){
   #' @return a list containing X,Y,corfficients,and intercept matrix
   
   # define total number of columns
-  p=p1+p2+p3
-  
-  # Define support size
-  supp_size = as.integer(0.1*p)
-  support_mat = matrix(0,nrow = n ,ncol = supp_size)
+  p <- p1+p2+p3
   
   # Generate X matrix from multivariate Gaussian with exponential correlation 
   cov_mat = matrix(0,nrow = p,ncol = p)
@@ -36,30 +32,18 @@ sim_dat = function(n, p1,p2,p3,rho=0.5, snr=5){
     }
   }
   
-  x = mvrnorm(n=n,mu=rep(0,p),Sigma = cov_mat)
+  # generate X and center/standardize
+  x <- mvrnorm(n=n, mu=rep(0,p), Sigma = cov_mat)
+  x_centered <- x - colMeans(x)
+  x_normalized <-  x_centered / norm(x_centered, type = "2")
   
-  x_centered = x - colMeans(x)
-  x_normalized =  x_centered / norm(x_centered, type = "2")
-  
+  # generate beta values
   b <- runif(p1)
   b <- c(b, runif(p2,min=1,max=5), rep(0,p3))
   
+  # find vals
   mu <- x %*% b
   intercept <- -mean(mu)
-  
-  
-  #unshuffled_support = c()
-  #for (i in 1:p) {
-  #  if (i %% (p/supp_size) == 0) {
-  #    unshuffled_support <- c(unshuffled_support, i)
-  #  }
-  #}
-
-  #b = matrix(0,nrow = p,ncol = 1)
-  #b[unshuffled_support] = 1
-  
-  # get mu = x * b
-  #mu = x %*% b
   
   # Calculate var_xb
   var_xb <- var(mu, na.rm = TRUE)
@@ -70,12 +54,12 @@ sim_dat = function(n, p1,p2,p3,rho=0.5, snr=5){
   # Generate random epsilon values with the specified standard deviation
   epsilon <- rnorm(n, mean = 0, sd = sd_epsilon)
   
-  mu_star = mu +  matrix(epsilon, ncol = 1)
+  mu_star <- mu +  matrix(epsilon, ncol = 1)
   probs <- exp(mu_star)/(1+exp(mu_star))
   y <- rbinom(n, 1, prob = probs)
 
   
-  return(list(x=x_normalized,y=y,coef=b,intercept = intercept ))
+  return(list(x=x_normalized, y=y, coef=b, intercept = intercept))
 }
 
 
