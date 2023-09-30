@@ -51,7 +51,7 @@ run_experiments <- function(my_path){
     max_abs <- max(abs(mod$beta[-1]))
     
     # Add row to data frame
-    file_row <- data.frame(data=f, n = nrow(X), p = ncol(X), lambda0 = 0, 
+    file_row <- data.frame(data=f, n = nrow(X), p = ncol(X), lambda0 = lambda0, 
                non_zeros = non_zeros, med_abs = med_abs, max_abs = max_abs,
                acc = res_metrics$acc, sens = res_metrics$sens, 
                spec = res_metrics$spec, sec = time_secs)
