@@ -277,19 +277,25 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 #' @param y numeric vector for the response variable (binomial)
 #' @param weights numeric vector of length n with weights for each 
 #' observation (defult NULL - will give equal weights)
-#' @param lambda0 penalty coefficient for L0 term (default 0)
 #' @param a integer lower bound for betas (default -10)
 #' @param b integer upper bound for betas (default 10)
 #' @param max_iters maximum number of iterations (default 100)
 #' @param tol tolerance for convergence
+#' @param nlambda number of lambda values to try (default 10)
+#' @param lambda_min_ratio smallest value for lambda, as a fraction of
+#' lambda_max, the (data derived) entry value (i.e. the smallest value
+#' for which all coefficients are zero). The default depends on the sample size 
+#' (n) relative to the number of variables (p). If n > p, the default is 0.0001, 
+#' close to zero.  If n < p, the default is 0.01.
 #' @param lambda0 optional sequence of lambda values (default NULL)
 #' @param nfolds number of folds, implied if foldids provided (default 10)
 #' @param foldids optional vector of values between 1 and nfolds (default NULL)
 #' @return class of cv_risk_mod with a list containing a data.frame of results
 #' along with the lambda_min and lambda_1se
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
-                        tol= 1e-5, lambda0 = NULL, nfolds = 10, 
-                        foldids = NULL) {
+                        tol= 1e-5, nlambda = 10, 
+                        lambda_min_ratio = ifelse(nrow(X) < ncol(X), 0.01, 1e-04), 
+                        lambda0 = NULL, nfolds = 10, foldids = NULL) {
   # Get folds 
   if (is.null(foldids) & is.null(nfolds)) stop("Must provide foldids or nfolds")
   if (is.null(foldids)){
@@ -303,8 +309,17 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   
   # Get lambda sequence
   if (is.null(lambda0)){
-    lambda0 <- exp(seq(-6,-2, 0.5)) 
-  }
+    sd_n <- function(y) sqrt(sum((y-mean(y))^2)/length(y))
+    
+    X_scaled <- scale(X[,-1], scale=apply(X[,-1], 2, mysd))
+    X_scaled <- as.matrix(X_scaled, ncol = ncol(X[,-1]), nrow = nrow(X[,-1]))
+    y_weighted <- ifelse(y==0, -mean(y == 1), mean(y == 0))
+    
+    lambda_max <- max(abs(colSums(X_scaled*y_weighted)))/length(y_weighted)
+    lambda0 <- exp(seq(log(lambda_max), log(lambda_max * lambda_min_ratio), 
+                       length.out=nlambda))
+  } 
+  
   num_lambda0 <- length(lambda0)
   if (num_lambda0 < 2) stop("Need at least two values for lambda0")
 
