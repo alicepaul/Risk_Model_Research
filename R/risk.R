@@ -311,7 +311,7 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   if (is.null(lambda0)){
     sd_n <- function(y) sqrt(sum((y-mean(y))^2)/length(y))
     
-    X_scaled <- scale(X[,-1], scale=apply(X[,-1], 2, mysd))
+    X_scaled <- scale(X[,-1], scale=apply(X[,-1], 2, sd_n))
     X_scaled <- as.matrix(X_scaled, ncol = ncol(X[,-1]), nrow = nrow(X[,-1]))
     y_weighted <- ifelse(y==0, -mean(y == 1), mean(y == 0))
     
