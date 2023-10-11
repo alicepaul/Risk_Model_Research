@@ -293,7 +293,7 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 #' @return class of cv_risk_mod with a list containing a data.frame of results
 #' along with the lambda_min and lambda_1se
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
-                        tol= 1e-5, nlambda = 10, 
+                        tol= 1e-5, nlambda = 25, 
                         lambda_min_ratio = ifelse(nrow(X) < ncol(X), 0.01, 1e-04), 
                         lambda0 = NULL, nfolds = 10, foldids = NULL) {
   # Get folds 
@@ -365,5 +365,53 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   class(cv_obj) <- "cv_risk_mod"
   return(cv_obj)
 }
+
+#' Get model score card and map scores to risks
+#'
+#'Summarizes the number of points per feature and maps the each possible total 
+#'score to its associated risk.
+#' @param mod risk_mod object
+#' @return List with model_card and score_map tables
+get_model_card <- function(mod) {
+  
+  # get coefficients
+  intercept <- mod$beta[1]
+  nonzero_beta <- mod$beta[mod$beta != 0][-1]
+  n_nonzero <- length(nonzero_beta)
+  
+  # save model score card
+  model_card <- data.frame(Points = nonzero_beta)
+
+  # find all possible scores
+  all_combinations <- expand.grid(rep(list(0:1), n_nonzero))
+  for (i in 1:n_nonzero) {
+    all_combinations[all_combinations[,i] == 1, i] <- nonzero_beta[i]
+  }
+  all_scores <- unique(rowSums(all_combinations)) %>% sort()
+  
+  # save score-to-risk map
+  score_map <- data.frame(Score = all_scores, 
+                          Risk = round(100*(exp(intercept + all_scores) / (1 + exp(intercept + all_scores))),1))
+
+  return(list(model_card = model_card, score_map = score_map))
+}
+
+#' Plot cross-validation results
+#'
+#'Creates a plot of the deviance for each lambda
+#' @param cv_obj cv_risk_mod object
+#' @return Plot
+plot_cv_results <- function(cv_obj) {
+
+  cv_plot <- ggplot(cv_obj$results,aes(x = lambda0, y = mean_dev)) + 
+    geom_point() + 
+    geom_errorbar(aes(ymin = mean_dev - sd_dev, ymax= mean_dev + sd_dev)) +
+    labs(x = "Lambda", y = "Deviance") + 
+    theme_minimal()
+  
+  return(cv_plot)
+}
+
+
 
 
