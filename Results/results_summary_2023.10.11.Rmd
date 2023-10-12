@@ -1,0 +1,24 @@
+---
+title: "Results Summary 2023.10.11"
+author: "Yu Yan"
+date: "2023-10-11"
+header-includes:
+  - \usepackage{placeins}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(error = F)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
+#knitr::opts_chunk$set(fig.width=8, fig.height=4) 
+library(tidyverse)
+library(kableExtra)
+library(mice)
+library(gtsummary)
+library(psych)
+library(ggridges)
+```
+
+This document includes simulation results summary of 2023.10.11. The simulation was about testing performance of cyclical coordinate descent risk score algorithm on newly generated data. The new generated data incorporated 
