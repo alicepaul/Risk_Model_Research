@@ -1,0 +1,153 @@
+---
+title: "Results Summary 2023.10.11"
+author: "Yu Yan"
+date: "2023-10-11"
+header-includes:
+  - \usepackage{placeins}
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(error = F)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
+#knitr::opts_chunk$set(fig.width=8, fig.height=4) 
+library(tidyverse)
+library(kableExtra)
+library(mice)
+library(gtsummary)
+library(psych)
+library(ggridges)
+library(writexl)
+```
+
+This document includes simulation results summary of 2023.10.11. The simulation was about testing performance of cyclical coordinate descent risk score algorithm on newly generated data. The new generated data incorporated more variability in the relationship between covarites as we applied exponential correlation and signal-to-noise ratio while generate simulated data. We tested the performance in three settings: no cross validation, cross validation then select lambda_min as lambda0 in the risk model, and cross validation then select lambda_1se as lambda0 in the risk model.
+
+
+```{r eval=F}
+ncd_cv_R_newdat_min = ncd_cv_R_newdat_min %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+levels(ncd_cv_R_newdat_min$p2)
+
+ncd_cv_R_newdat_min %>% select(p2,rho,sec) %>% 
+  tbl_strata(
+    strata = p2,
+    .tbl_fun =
+      ~ .x %>%
+      tbl_summary(by = rho,
+        missing_text = "NA",
+        type = list(sec ~ 'continuous'),
+    statistic = all_continuous() ~ "{mean}") %>%
+      add_n() ,
+    .header = "**{strata}**"  
+  ) 
+
+```
+
+```{r}
+ncd_cv_R_newdat_min = ncd_cv_R_newdat_min %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+min = ncd_cv_R_newdat_min %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+                                                           non_zero_mean = mean(non_zeros),
+                                                           sec_mean = mean(sec),
+                                                           acc_mean = mean(acc),
+                                                           sens_mean = mean(sens),
+                                                           spec_mean = mean(spec))
+
+names(min)[1] = 'p'
+```
+
+```{r}
+ncd_cv_R_newdat_1se = ncd_cv_R_newdat_1se %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_1se$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_cv_R_newdat_1se$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_cv_R_newdat_1se$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_cv_R_newdat_1se$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+se = ncd_cv_R_newdat_1se %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+                                                           non_zero_mean = mean(non_zeros),
+                                                           sec_mean = mean(sec),
+                                                           acc_mean = mean(acc),
+                                                           sens_mean = mean(sens),
+                                                           spec_mean = mean(spec))
+
+names(se)[1] = 'p'
+```
+
+```{r}
+ncd_R_newdat = ncd_R_newdat %>% mutate(p2 = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+r = ncd_R_newdat %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+                                                           non_zero_mean = mean(non_zeros),
+                                                           sec_mean = mean(sec),
+                                                           acc_mean = mean(acc),
+                                                           sens_mean = mean(sens),
+                                                           spec_mean = mean(spec))
+
+names(r)[c(1,4)] = c('p','lambda0')
+```
+
+```{r}
+# Export
+tables <- list(tbl1 = r, tbl2 = min, tbl3=se)
+write_xlsx(tables, path = "summary.xlsx")
+
+```
+
