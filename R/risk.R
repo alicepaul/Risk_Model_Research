@@ -366,17 +366,17 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   return(cv_obj)
 }
 
-#' Get model score card and map scores to risks
+#' Get model scores and associated risks
 #'
 #'Summarizes the number of points per feature and maps the each possible total 
 #'score to its associated risk.
-#' @param mod risk_mod object
-#' @return List with model_card and score_map tables
-get_model_card <- function(mod) {
+#' @param object an object of class "risk_mod", usually a result of a call to risk_mod()
+#' @return model_card and score_map dataframes returned in a list
+get_model_card <- function(object) {
   
   # get coefficients
-  intercept <- mod$beta[1]
-  nonzero_beta <- mod$beta[mod$beta != 0][-1]
+  intercept <- object$beta[1]
+  nonzero_beta <- object$beta[object$beta != 0][-1]
   n_nonzero <- length(nonzero_beta)
   
   # save model score card
@@ -389,29 +389,140 @@ get_model_card <- function(mod) {
   }
   all_scores <- unique(rowSums(all_combinations)) %>% sort()
   
+  # map scores to risk
+  v <- mod$gamma*(intercept + all_scores)
+  p <- exp(v)/(1+exp(v))
+  
   # save score-to-risk map
   score_map <- data.frame(Score = all_scores, 
-                          Risk = round(100*(exp(intercept + all_scores) / (1 + exp(intercept + all_scores))),1))
+                          Risk = round(100*p,1))
 
   return(list(model_card = model_card, score_map = score_map))
 }
 
+
+#' Summarize Risk Model Fits
+#'
+#' Prints text that summarizes risk_mod objects 
+#' @param object an object of class "risk_mod", usually a result of a call to risk_mod()
+#' @return text with intercept, nonzero coefficients, gamma, lambda, and deviance
+summary.risk_mod <- function(object) {
+  
+  coef <- object$beta
+  res_metrics <- get_metrics(object)
+  
+  cat("\nIntercept: ", coef[1], "\n", sep = "")
+  cat("\n")
+  
+  nonzero_beta <- coef[coef != 0][-1] %>%
+    as.data.frame()
+  cat("Non-zero coefficients:")
+  printCoefmat(nonzero_beta)
+  cat("\n")
+  
+  cat("Gamma (multiplier): ", object$gamma, "\n")
+  cat("Lambda (regularizer): ", object$lambda0, "\n")
+  cat("Deviance: ", object$glm_mod$deviance, "\n\n")
+  
+}
+
+
+#' Extract Model Coefficients
+#'
+#' Extracts model coefficients (both nonzero and zero) from risk_mod object
+#' @param object an object of class "risk_mod", usually a result of a call to risk_mod()
+#' @return numeric vector with coefficients
+coef.risk_mod <- function(object) {
+  
+  names(object$beta)[1] <- "(Intercept)"
+  object$beta
+  
+}
+
+#' Model Predictions
+#'
+#' Obtains predictions from a risk score model object. 
+#' @param object an object of class "risk_mod", usually a result of a call to 
+#' risk_mod()
+#' @param newdata optionally, a data frame in which to look for variables with 
+#' which to predict. If omitted, the fitted linear predictors are used. 
+#' @param type the type of prediction required. The default is on the scale of 
+#' the linear predictors; the alternative "response is on the scale of the 
+#' response variable. Thus for a risk score model, the default predictions are of
+#' log-odds (probabilities on logit scale) and type = "response" gives the 
+#' predicted risk probabilities. The "score" option returns integer risk scores. 
+#' @return array with predictions
+predict.risk_mod <- function(object, newdata = NULL, 
+                             type = c("link", "response", "score")) {
+  
+  if (is.null(newdata)) {
+    X <- object$X
+  } else {
+    X <- newdata
+  }
+  
+  v <- object$gamma * X %*% object$beta
+  v <- clip_exp_vals(v)
+  p <- exp(v)/(1+exp(v))
+  
+  type = match.arg(type)
+  
+  if (type == "link") {
+    return(v)
+  } else if (type == "response") {
+    return(p)
+  } else if (type == "score") {
+    return(X[,-1] %*% object$beta[-1])
+  }
+  
+}
+
 #' Plot cross-validation results
 #'
-#'Creates a plot of the deviance for each lambda
-#' @param cv_obj cv_risk_mod object
-#' @return Plot
-plot_cv_results <- function(cv_obj) {
-
-  cv_plot <- ggplot(cv_obj$results,aes(x = lambda0, y = mean_dev)) + 
+#' Plots the mean deviance for each lambda tested during cross-validation
+#' @param object an object of class "cv_risk_mod", usually a result of a call to 
+#' cv_risk_mod()
+#' @param lambda_text default plot includes text annotation indicating 
+#' lambda_min and lambda_1se values returned by cross-validation. Set 
+#' lambda_text = FALSE to remove text from plot. 
+#' @return ggplot object 
+plot_cv_results <- function(object, lambda_text = TRUE) {
+  
+  # get mean/sd deviance of lambda_min
+  min_mean <- object$results$mean_dev[object$results$lambda0 == object$lambda_min]
+  min_sd <- object$results$sd_dev[object$results$lambda0 == object$lambda_min]
+  
+  # create plot 
+  cv_plot <- ggplot(object$results,aes(x = log(lambda0), y = mean_dev)) + 
     geom_point() + 
-    geom_errorbar(aes(ymin = mean_dev - sd_dev, ymax= mean_dev + sd_dev)) +
-    labs(x = "Lambda", y = "Deviance") + 
+    geom_linerange(aes(ymin = mean_dev - sd_dev, ymax= mean_dev + sd_dev)) +
+    geom_point(aes(x = log(object$lambda_min), y = min_mean), color = "red") + 
+    geom_linerange(aes(x = log(object$lambda_min), ymin = min_mean - min_sd, 
+                       ymax= min_mean + min_sd), color = "red", inherit.aes = FALSE) +
+    geom_hline(yintercept = min_mean + min_sd, linetype = "dashed", color = "red") + 
+    geom_lambda(lambda_text, object) +
+    labs(x = "Log Lambda", y = "Deviance") + 
     theme_minimal()
   
   return(cv_plot)
 }
 
-
-
+#' Add text annotation to CV plot
+#'
+#' Adds text annotation indicating lambda_min and lambda_1se values returned by 
+#' cross-validation.
+#' @param lambda_text TRUE or FALSE indicating whether to add text annotation
+#' @param object an object of class "cv_risk_mod", usually a result of a call to 
+#' cv_risk_mod()
+#' @return ggplot annotation layer
+geom_lambda <- function(lambda_text = TRUE, object) {
+  if (lambda_text)
+    annotate("text", 
+             x = min(log(object$results$lambda0))*0.95, 
+             y = max(object$results$mean_dev), 
+             label = paste("lambda_min = ", 
+                           round(object$lambda_min,5), 
+                           "\nlambda_1se = ", round(object$lambda_1se, 5)),
+             hjust = 0)  
+}
 
