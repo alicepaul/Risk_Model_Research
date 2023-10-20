@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = F)
 knitr::opts_chunk$set(error = F)
 knitr::opts_chunk$set(warning = F)
 knitr::opts_chunk$set(message = F)
+
 #knitr::opts_chunk$set(fig.width=8, fig.height=4) 
 library(tidyverse)
 library(kableExtra)
@@ -22,8 +23,37 @@ library(ggridges)
 library(writexl)
 ```
 
-This document includes simulation results summary of 2023.10.11. The simulation was about testing performance of cyclical coordinate descent risk score algorithm on newly generated data. The new generated data incorporated more variability in the relationship between covarites as we applied exponential correlation and signal-to-noise ratio while generate simulated data. We tested the performance in three settings: no cross validation, cross validation then select lambda_min as lambda0 in the risk model, and cross validation then select lambda_1se as lambda0 in the risk model.
+```{r echo=F}
+#This document includes simulation results summary of 2023.10.11. The simulation was about testing performance of cyclical coordinate descent risk score algorithm on newly generated data. The new generated data incorporated more variability in the relationship between covariate as we applied exponential correlation and signal-to-noise ratio while generate simulated data. We tested the performance in three settings: no cross validation, cross validation then select lambda_min as lambda0 in the risk model, and cross validation then select lambda_1se as lambda0 in the risk model.
 
+#The new generation of simulated data are generated as follows. We created a simulation function with the following input parameters:n,p1,p2,p3,rho,snr. The feature set has n*p(p1+p2+p3) dimensions, sampled from multivariate Gaussian with exponential correlation between columns, where p1 denotes number of variables with coefficient between  0 and 1, p2 denotes number of variables with coefficient between  1 and 5, and p3 denotes number of variables with coefficient of 0. The exponential correlation between columns is denoted by rho, defaulting 0.5. During the generation process, outcome variable is generated as y = xb + epsilon, where b is a vector with 'supp_size', defined as randomly chosen entries equal to 1 and the rest equal to 0. For a more comprehensive evaluation of the current risk model, we introduced some random noise to the simulated data to see if it catches the correct feature sets. We establish this by incorporating a signal to noise ratio parameter in the data simulation function as snr. It is reflected by creating random noise epsilon when generating the outcome variable in each calling of the function. In conclusion, by setting each parameters, the function outputs a list containing four elements: feature matrix x, outcome variable y, coefficnets to each feature, and the intercept. 
+
+#This simulation task involved using simulated data as above to test the current algorithm. The goal is to see how the running time of the algorithm increases with respect to varying dimensions and whether it finds the correct structure of the data with varying degree of noise. The varying conditions were established by setting the parameters as followings: N = 1000, P = 10, 50, 100, P1 = 0, p2 = 10%, 50% or 90% of P, Rho = 0.1, 0.5, 0.9,SNR = 5, for each unique combination setting of the parameters,we created 10 data frames for each setting
+```
+
+# Simulation Results Summary (Date: 2023.10.11)
+
+In this report, we provide a comprehensive overview of simulation results conducted on October 11, 2023, focusing on the evaluation of the cyclical coordinate descent risk score algorithm's performance. The simulation aimed to assess the algorithm's efficacy in handling complex, real-world data scenarios by introducing enhanced variability in the relationship between covariates.
+
+## Simulation Methodology:
+
+The simulated data were generated using a sophisticated simulation function tailored for statistical robustness. The function accepted various input parameters, including sample size (\(n\)), the number of variables with coefficients between 0 and 1 (\(p_1\)), variables with coefficients between 1 and 5 (\(p_2\)), and variables with coefficients equal to 0 (\(p_3\)). The feature set, structured as \(n \times p \times (p_1 + p_2 + p_3)\), was meticulously sampled from a multivariate Gaussian distribution. Notably, the correlation between columns was introduced through an exponential correlation mechanism, characterized by the parameter \(\rho\) (defaulting to 0.5). 
+
+In the generation process, the outcome variable (\(y\)) was modeled as \(y = xb + \epsilon\), where \(b\) represented a vector with 'supp_size' elements, randomly set to 1 and the remaining set to 0. To emulate real-world complexities, random noise (\(\epsilon\)) was incorporated. The magnitude of this noise, controlled by the signal-to-noise ratio parameter (SNR), played a pivotal role in evaluating the algorithm's resilience in noisy environments.
+
+## Simulation Settings and Variability Parameters:
+
+The simulation was conducted under three distinct settings to comprehensively analyze the algorithm's behavior:
+
+1. **No Cross Validation:** The algorithm's performance was analyzed without employing cross-validation.
+2. **Cross Validation with \(\lambda_{\text{min}}\):** Cross-validation was employed, and \(\lambda_{\text{min}}\) was selected as \(\lambda_0\) in the risk model.
+3. **Cross Validation with \(\lambda_{\text{1se}}\):** Cross-validation was applied, and \(\lambda_{\text{1se}}\) was chosen as \(\lambda_0\) in the risk model.
+
+The simulation spanned various combinations of parameters, including a sample size of \(N = 1000\), varying feature dimensions (\(P = 10\), 50, 100), proportions of coefficients (\(P_1 = 0\), \(p_2 = 10\%\), \(50\%\), \(90\%\) of \(P\)), and correlation strengths (\(\rho = 0.1\), 0.5, 0.9). Additionally, the SNR parameter was set to 5 to represent different levels of noise in the data. For each unique combination, ten data frames were generated for meticulous analysis.
+
+## Background Significance:
+
+Understanding the algorithm's behavior under diverse and challenging conditions is crucial for real-world applications. By introducing intricate relationships and noise structures, we aimed to simulate scenarios encountered in complex datasets. This comprehensive evaluation provides insights not only into the algorithm's accuracy but also its stability and adaptability in addressing real-world complexities.
 
 ```{r eval=F}
 ncd_cv_R_newdat_min = ncd_cv_R_newdat_min %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
@@ -78,6 +108,7 @@ ncd_cv_R_newdat_min = ncd_cv_R_newdat_min %>% mutate(p2 = unlist(lapply(ncd_cv_R
   return(split_string[6])
   })))
 
+
 min = ncd_cv_R_newdat_min %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
                                                            non_zero_mean = mean(non_zeros),
                                                            sec_mean = mean(sec),
@@ -86,6 +117,7 @@ min = ncd_cv_R_newdat_min %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = 
                                                            spec_mean = mean(spec))
 
 names(min)[1] = 'p'
+min$p2p = as.numeric(min$p2) / as.numeric(min$p)
 ```
 
 ```{r}
@@ -114,27 +146,29 @@ se = ncd_cv_R_newdat_1se %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = m
                                                            spec_mean = mean(spec))
 
 names(se)[1] = 'p'
+se$p2p = as.numeric(se$p2) / as.numeric(se$p)
+
 ```
 
 ```{r}
-ncd_R_newdat = ncd_R_newdat %>% mutate(p2 = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+ncd_nocv_newdat = ncd_nocv_newdat %>% mutate(p2 = unlist(lapply(ncd_nocv_newdat$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[3])
   })), 
-                                   p3 = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+                                   p3 = unlist(lapply(ncd_nocv_newdat$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[4])
   })),
-                                   rho = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+                                   rho = unlist(lapply(ncd_nocv_newdat$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[5])
   })),
-                                   rep = unlist(lapply(ncd_R_newdat$data, function(input_string) {
+                                   rep = unlist(lapply(ncd_nocv_newdat$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[6])
   })))
 
-r = ncd_R_newdat %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+r = ncd_nocv_newdat %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
                                                            non_zero_mean = mean(non_zeros),
                                                            sec_mean = mean(sec),
                                                            acc_mean = mean(acc),
@@ -142,12 +176,37 @@ r = ncd_R_newdat %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lamb
                                                            spec_mean = mean(spec))
 
 names(r)[c(1,4)] = c('p','lambda0')
+r$p2p = as.numeric(r$p2) / as.numeric(r$p)
+
 ```
 
+# Running time Comparison
 ```{r}
+time_dat <- as.data.frame(cbind(min$p,min$p2,min$rho,min$sec_mean,se$sec_mean,r$sec_mean)) %>% set_names(c('p','p2','rho','min','se','nocv'))
+
+time_dat  %>% pivot_longer(c(min,se,nocv), names_to = 'type',values_to = 'sec') %>% 
+  ggplot(aes(x=as.numeric(p),y=as.numeric(sec),color=type)) + geom_smooth(se=F) + facet_grid(~rho)
+
+```
+
+
+# Accuracy comparison
+```{r}
+acc_dat <- as.data.frame(cbind(min$p,min$p2p,min$rho,min$acc_mean,se$acc_mean,r$acc_mean)) %>% set_names(c('p','p2','rho','min','se','nocv'))
+
+rho.labs <- c("rho=0.1", "rho=0.5", "rho=0.9")
+names(rho.labs) <- c("0.1", "0.5", "0.9")
+
+acc_dat  %>% pivot_longer(c(min,se,nocv), names_to = 'type',values_to = 'acc') %>% 
+  ggplot(aes(x=as.numeric(p),y=as.numeric(acc),color=type,linetype=as.factor(p2))) + geom_smooth(se=F) +
+  scale_linetype_manual(values = c("0.1" = "solid", "0.5" = "dashed",'0.9' = 'dotted')) +
+  facet_grid(~rho,labeller = labeller(rho = rho.labs)) + labs(x='P',y='Accuracy',color='CV Type',linetype='P2 Proportion',title = 'Summary of accuracy')
+
+```
+
+```{r eval=F}
 # Export
 tables <- list(tbl1 = r, tbl2 = min, tbl3=se)
 write_xlsx(tables, path = "summary.xlsx")
-
 ```
 
