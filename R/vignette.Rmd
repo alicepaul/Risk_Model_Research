@@ -1,0 +1,116 @@
+---
+title: "Risk Score Vignette"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Risk Score Vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+set.seed(1)
+```
+
+
+## Introduction 
+
+Risk scores are sparse linear models that map an integer linear combination of covariates to the probability of an outcome occurring. Unlike regression models, risk score models use small integer coefficients and dichotomous variables. These characteristics allow risk score predictions to be easily computed by adding or subtracting a few small numbers. 
+
+However, risk scores developed heuristically by altering logistic regression models have decreased performance, as there is a fundamental trade-off bewteen the model's simplicity and its predictive accuracy. This package presents an optimization approach to learning risk scores, where the constraints unique to risk scores are integrated into the model-fitting process, rather than implemented afterward. 
+
+The {packagename} package uses a cyclical coordinate descent algorithm to solve the following optimization problem.
+
+\begin{equation}
+\begin{aligned}
+\min_{\alpha,\beta} \quad & \frac{1}{n} \sum_{i=1}^{n} (\gamma y_i x_i^T \beta - log(1 + exp(\gamma x_i^T \beta))) + \lambda_0 \sum_{j=1}^{p} 1(\beta_{j} \neq 0)\\
+\textrm{s.t.} \quad & l \le \beta_j \le u \; \; \; \forall j = 1,2,...,p\\
+  &\beta_j \in \mathbb{Z} \; \; \; \forall j = 1,2,...,p \\
+  &\beta_0, \gamma \in \mathbb{R} \\
+\end{aligned}
+\end{equation}
+
+This vignette demonstrates how to use the {packagename} R package to build risk score models using an application in medication adherence. 
+
+```{r, eval = FALSE}
+library(packagename)
+
+```
+
+## Loading Example Data
+
+First we'll load the example dataset that comes with the {packagename} package. This dataset contains information about adolescents in Peru prescribed tuberculosis (TB) medication. We want to develop a risk score model that predicts adherence to TB medication. 
+
+```{r, eval = FALSE}
+data("tb_data_raw")
+
+```
+
+## Data Preprocessing
+
+Before building the risk score model, we need to preprocess the data. We'll determine our binary outcome and ensure that all variables are coded as integer or near integer values. For this example, we'll choose an outcome that is coded as 1 if the subject took all doses on time and as 0 if the subject missed any doses. 
+
+
+ 
+```{r, echo = FALSE}
+tb_data_raw <- read.csv("~/Documents/GitHub/Risk_Model_Research/tb_data/Peru_TB_data.csv")
+source('tb_preprocessing.R')
+```
+
+```{r}
+tb_data <- tb_preprocessing(tb_data_raw)
+```
+
+```{r, echo = FALSE}
+source('risk.R')
+```
+
+Additionally, we'll need to split out our data into a matrix with all covariates ("X") and a vector with the outcome data ("y"). In this case, the last column in our dataset contains the outcome variable. 
+
+```{r}
+X <- as.matrix(tb_data[, -ncol(tb_data)])
+y <- tb_data[, ncol(tb_data)]
+```
+
+## Cross Validation
+
+The penalty coefficient $\lambda_0$ controls the amount of regularization -- a larger value of $\lambda_0$ will result in fewer non-zero coefficients. We can use cross validation to find the optimal $\lambda_0$ value that creates a sufficiently sparse model without sacrificing performance. 
+
+
+
+```{r}
+cv_results <- cv_risk_mod(X, y, nfolds = 5, nlambda = 25)
+```
+
+
+The `cv_risk_mod()` function returns a `cv_risk_mod` object that contains a dataframe with the deviance, accuracy, and number of nonzero coefficients for each value of $\lambda_0$. The object also contains `lambda_min`, the value of $\lambda_0$ that returned the smallest mean deviance across all folds, and `lambda_1se`, the maximum $\lambda_0$ that had a mean deviance within one standard deviation of `lambda_min`. 
+
+If the user does not specify a vector of $\lambda_0$ values to test, the program constructs the $\lambda_0$ sequence. The maximum $\lambda_0$ value is the smallest value such that all coefficients are zero. The minimum $\lambda_0$ value is calculated using the user-defined `lambda_ratio` argument. 
+
+The `plot_cv_results()` function creates a plot of mean deviance for each $\lambda_0$ value. The `lambda_min` value is indicated in red, with it's standard deviation as a dotted line. The number of nonzero coefficients that are produced by the $\lambda_0$ value when fit on the full data are listed at the top of the plot. 
+
+```{r, fig.width = 6, fig.height = 3}
+plot_cv_results(cv_results)
+```
+
+
+## Fit Risk Score Model
+
+
+
+```{r}
+mod <- risk_mod(X, y, lambda0 = cv_results$lambda_min)
+
+summary(mod)
+```
+
+
+
+
+
+
+

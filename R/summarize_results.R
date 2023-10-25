@@ -1,6 +1,6 @@
 # setwd("/Users/hannaheglinton/Documents/GitHub/Risk_Model_Research/R")
 
-results <- read.csv("../sim_data/results_ncd_fr_HE.csv")
+results <- read.csv("../sim_dat_new/results_newsim_L0_R.csv")
 
 mean_performance <- results %>%
   group_by(n, p, method) %>%
@@ -25,3 +25,5 @@ summary <- left_join(mean_performance, perc_best) %>%
 
 
 write.csv(summary, "../sim_data/results_summary_0930.csv")
+
+
