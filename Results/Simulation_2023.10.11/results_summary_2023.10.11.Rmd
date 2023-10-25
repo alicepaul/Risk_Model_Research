@@ -92,6 +92,7 @@ ncd_cv_R_newdat_min %>% select(p2,rho,sec) %>%
 ```
 
 ```{r}
+ncd_cv_R_newdat_min <- read_csv('ncd_cv_R_newdat_min.csv')
 ncd_cv_R_newdat_min = ncd_cv_R_newdat_min %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_min$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[3])
@@ -122,6 +123,7 @@ min$p2p = as.numeric(min$p2) / as.numeric(min$p)
 ```
 
 ```{r}
+ncd_cv_R_newdat_1se <- read_csv('ncd_cv_R_newdat_1se.csv')
 ncd_cv_R_newdat_1se = ncd_cv_R_newdat_1se %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_1se$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[3])
@@ -152,6 +154,7 @@ se$p2p = as.numeric(se$p2) / as.numeric(se$p)
 ```
 
 ```{r}
+ncd_nocv_newdat <- read_csv('ncd_nocv_newdat.csv')
 ncd_nocv_newdat = ncd_nocv_newdat %>% mutate(p2 = unlist(lapply(ncd_nocv_newdat$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
   return(split_string[3])
@@ -183,10 +186,16 @@ r$p2p = as.numeric(r$p2) / as.numeric(r$p)
 
 
 # Non_zero comparison
-We can see that as rho increase, the algorithm behave poor in finding the structre. When rho is 0.1, the coefficient is very close to 1. meaning it finds very well the number of non-zero coefficients. And this performance decreases as rho gets bigger.
+
+One main goal of this simulation experiment is to see if the current algorithm finds the correct structure in the data presented. Our expectation in this goal is that the results are sensitive to randomness intrduced during data simulation phase. In specific, the data were generated with different number of p1,p2, and p3 each represent the number of variables(feature) with designated coefficients to the outcome. Among them, P2 indicate the number of non-zero variables. The nature of our algorithm should be able to identify the this number as the number of non-zero coefficients in the final outcome risk model since there is an L0 error term added that penalizes non-significant variables and eliminate their impact in the end. So our result should show that this pattern of matching non-zero coefficients and p2. Since there's different rho values, we expect that as rho increase, the algorithm is hard to identify the pattern as its performance are interpreted by the noises. 
+From the graph, we can see that as rho increase, the model's performance in this dimension gets worse. When rho is 0.1, the coefficient of fitted line is very close to 1 meaning it finds very well the number of non-zero coefficients. And as rho increases, it performs badly. The performance is consistently better when using lambda_min as the lambda_0 in comparison to using lambda_se.
+
 ```{r}
 nonz_Dat <- as.data.frame(cbind(min$p,min$p2,min$p2p,min$rho,min$non_zero_mean,se$non_zero_mean)) %>% set_names(c('p','p2','p2p','rho','min','se'))
 library(ggpmisc)
+
+rho.labs <- c("rho=0.1", "rho=0.5", "rho=0.9")
+names(rho.labs) <- c("0.1", "0.5", "0.9")
 
 nonz_Dat  %>% pivot_longer(c(min,se), names_to = 'type',values_to = 'non_zero') %>% 
   ggplot(aes(x=as.numeric(p2),y=as.numeric(non_zero),color=type)) + geom_smooth(se=F) +
@@ -199,11 +208,10 @@ nonz_Dat  %>% pivot_longer(c(min,se), names_to = 'type',values_to = 'non_zero') 
 ```
 
 # Running time Comparison
+The following graph summaries running time of the models stratified by different rho, P2 proportion and cv types.Higher P2 proportion and higher rho lead to longer running time. 
+
 ```{r}
 time_dat <- as.data.frame(cbind(min$p,min$p2p,min$rho,min$sec_mean,se$sec_mean,r$sec_mean)) %>% set_names(c('p','p2','rho','min','se','nocv'))
-
-rho.labs <- c("rho=0.1", "rho=0.5", "rho=0.9")
-names(rho.labs) <- c("0.1", "0.5", "0.9")
 
 time_dat  %>% pivot_longer(c(min,se,nocv), names_to = 'type',values_to = 'run_time') %>% 
   ggplot(aes(x=as.numeric(p),y=as.numeric(run_time),color=type,linetype=as.factor(p2))) + geom_smooth(se=F) +
@@ -213,6 +221,8 @@ time_dat  %>% pivot_longer(c(min,se,nocv), names_to = 'type',values_to = 'run_ti
 
 
 # Accuracy comparison
+The following graph summaries accuracy of the models stratified by different rho, P2 proportion and CV types. We do not observe much significant difference in the accuracy of the prediction in terms of different parameters. This validates the robustness of the model.
+
 ```{r}
 acc_dat <- as.data.frame(cbind(min$p,min$p2p,min$rho,min$acc_mean,se$acc_mean,r$acc_mean)) %>% set_names(c('p','p2','rho','min','se','nocv'))
 
