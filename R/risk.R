@@ -232,7 +232,8 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   # Initial beta is null then round LR coefficients using median 
   if (is.null(beta)){
     # Initial model 
-    init_mod <- glm(y~X-1, family = "binomial", weights = weights)
+    df <- data.frame(X, y)
+    init_mod <- glm(y~.-1, family = "binomial", weights = weights, data = df)
     
     # Replace NA's with 0's
     coef_vals <- unname(coef(init_mod))
@@ -261,8 +262,8 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   beta <- res$beta
   
   # Convert to GLM object and return
-  glm_mod <- glm(y~X-1, family = "binomial", weights = weights, 
-      start = gamma*beta, method=glm_fit_risk)
+  glm_mod <- glm(y~.-1, family = "binomial", weights = weights, 
+      start = gamma*beta, method=glm_fit_risk, data = df)
   names(beta) <- names(coef(glm_mod))
   mod <- list(gamma=gamma, beta=beta, glm_mod=glm_mod, X=X, y=y, weights=weights,
                  lambda0 = lambda0)
@@ -329,6 +330,7 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
                        dev = rep(0, nfolds*num_lambda0),
                        acc = rep(0, nfolds*num_lambda0), 
                        non_zeros = rep(0, nfolds*num_lambda0))
+
   
   # Function to run for single fold and lambda0
   fold_fcn <- function(l0, foldid){
@@ -352,6 +354,18 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
     group_by(lambda0) %>%
     summarize(mean_dev = mean(dev), sd_dev = sd(dev),
               mean_acc = mean(acc), sd_acc = sd(acc))
+  
+  # Find number of nonzero coefficients when fit on full data 
+  full_fcn <- function(l0) {
+    mod <- risk_mod(X, y,  gamma = NULL, beta = NULL, 
+                    weights = weights, lambda0 = l0, a = a, b = b, 
+                    max_iters = max_iters, tol= 1e-5)
+    non_zeros <- sum(mod$beta[-1] != 0)
+    return(non_zeros)
+  }
+  
+  res_df$nonzero <- sapply(1:nrow(res_df),
+                             function(i) full_fcn(res_df$lambda0[i]))
   
   # Find lambda_min and lambda1_se for deviance
   lambda_min_ind <- which.min(res_df$mean_dev)
@@ -422,7 +436,8 @@ summary.risk_mod <- function(object) {
   
   cat("Gamma (multiplier): ", object$gamma, "\n")
   cat("Lambda (regularizer): ", object$lambda0, "\n")
-  cat("Deviance: ", object$glm_mod$deviance, "\n\n")
+  cat("Deviance: ", object$glm_mod$deviance, "\n")
+  cat("AIC: ", object$glm_mod$aic, "\n\n")
   
 }
 
@@ -486,7 +501,7 @@ predict.risk_mod <- function(object, newdata = NULL,
 #' lambda_min and lambda_1se values returned by cross-validation. Set 
 #' lambda_text = FALSE to remove text from plot. 
 #' @return ggplot object 
-plot_cv_results <- function(object, lambda_text = TRUE) {
+plot_cv_results <- function(object, lambda_text = FALSE) {
   
   # get mean/sd deviance of lambda_min
   min_mean <- object$results$mean_dev[object$results$lambda0 == object$lambda_min]
@@ -500,6 +515,11 @@ plot_cv_results <- function(object, lambda_text = TRUE) {
     geom_linerange(aes(x = log(object$lambda_min), ymin = min_mean - min_sd, 
                        ymax= min_mean + min_sd), color = "red", inherit.aes = FALSE) +
     geom_hline(yintercept = min_mean + min_sd, linetype = "dashed", color = "red") + 
+    
+    geom_text(aes(x = log(lambda0), label = nonzero, 
+                  y = (max(mean_dev) + max(sd_dev))*1.01),
+              size = 2.5, col = 'grey30') +
+    
     geom_lambda(lambda_text, object) +
     labs(x = "Log Lambda", y = "Deviance") + 
     theme_minimal()
