@@ -100,16 +100,11 @@ plot_cv_results(cv_results)
 
 ## Fit Risk Score Model
 
-
-
 ```{r}
 mod <- risk_mod(X, y, lambda0 = cv_results$lambda_min)
 
 summary(mod)
 ```
-
-
-
 
 
 
