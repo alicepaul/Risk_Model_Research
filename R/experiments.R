@@ -1,5 +1,7 @@
 source('risk.R')
-
+# For Parallel Programming
+library(doParallel)
+registerDoParallel(cores=4)
 run_experiments <- function(my_path){
   #' Risk model algorithm experiments
   #' 
@@ -39,7 +41,7 @@ run_experiments <- function(my_path){
     
     # Run algorithm to get risk model
     t1 <- Sys.time()
-    lambda0 <- cv_risk_mod(X, y, weights=weights, nfolds = 5)$lambda_min
+    lambda0 <- cv_risk_mod(X, y, weights=weights, nfolds = 5,parallel = T)$lambda_min
     mod <- risk_mod(X, y, weights=weights, lambda0 = lambda0)
     t2 <- Sys.time()
       

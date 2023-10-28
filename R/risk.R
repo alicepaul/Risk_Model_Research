@@ -1,6 +1,7 @@
 source("utils.R")
 source("helper_functions.R")
 library(tidyverse) 
+require(foreach)
 
 # Update documentation
 
@@ -291,12 +292,15 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 #' @param lambda0 optional sequence of lambda values (default NULL)
 #' @param nfolds number of folds, implied if foldids provided (default 10)
 #' @param foldids optional vector of values between 1 and nfolds (default NULL)
+#' @param parallel If \code{TRUE}, use parallel \code{foreach} to fit each fold.  
+#' Must register parallel before hand, such as \code{doParallel} or others.
 #' @return class of cv_risk_mod with a list containing a data.frame of results
 #' along with the lambda_min and lambda_1se
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
                         tol= 1e-5, nlambda = 25, 
                         lambda_min_ratio = ifelse(nrow(X) < ncol(X), 0.01, 1e-04), 
-                        lambda0 = NULL, nfolds = 10, foldids = NULL) {
+                        lambda0 = NULL, nfolds = 10, foldids = NULL, parallel=F) {
+  nfolds=5
   # Get folds 
   if (is.null(foldids) & is.null(nfolds)) stop("Must provide foldids or nfolds")
   if (is.null(foldids)){
@@ -334,6 +338,7 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   
   # Function to run for single fold and lambda0
   fold_fcn <- function(l0, foldid){
+    foldid=2
     X_train <- X[foldids != foldid, ]
     y_train <- y[foldids != foldid]
     weight_train <- weights[foldids != foldid]
@@ -346,9 +351,22 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   }
   
   # Run through all folds
-  res_df[,3:5] <- t(sapply(1:nrow(res_df), 
-                         function(i) fold_fcn(res_df$lambda0[i], 
-                                              res_df$fold[i])))
+  # Parallel Programming. ! Must register parallel beforehand 
+  if (parallel) {
+
+    outlist = foreach(i = 1:nrow(res_df)) %dopar%
+      {
+       fold_fcn(res_df[i,1],res_df[i,2])
+      }
+    res_df[,3:5] <- t(sapply(1:nrow(res_df), function(i) res_df[i,3:5] <- outlist[[i]]))
+  } else {
+    
+    res_df[,3:5] <- t(sapply(1:nrow(res_df), 
+                             function(i) fold_fcn(res_df$lambda0[i], 
+                                                  res_df$fold[i])))
+  }
+  
+  
   # Summarize
   res_df <- res_df %>%
     group_by(lambda0) %>%

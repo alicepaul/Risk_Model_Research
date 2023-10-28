@@ -236,6 +236,85 @@ acc_dat  %>% pivot_longer(c(min,se,nocv), names_to = 'type',values_to = 'acc') %
 
 ```
 
+# Parallel Computation
+In this section, the possibility of conducting cross validation using parallel computaion was added to the existing version with a new parameter of the function for the users' own choice. We would like to see how does the performance change with respect to parallel vs non parallel
+```{r}
+ncd_cv_R_newdat_1se_para <- read.csv('ncd_cv_R_newdat_1se_para.csv')
+ncd_cv_R_newdat_min_para <- read.csv('ncd_cv_R_newdat_min_para.csv')
+```
+
+
+```{r}
+ncd_cv_R_newdat_min_para = ncd_cv_R_newdat_min_para %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_min_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_cv_R_newdat_min_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_cv_R_newdat_min_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_cv_R_newdat_min_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+min_para = ncd_cv_R_newdat_min_para %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+                                                           non_zero_mean = mean(non_zeros),
+                                                           sec_mean = mean(sec),
+                                                           acc_mean = mean(acc),
+                                                           sens_mean = mean(sens),
+                                                           spec_mean = mean(spec))
+
+names(min_para)[1] = 'p'
+min_para$p2p = as.numeric(min_para$p2) / as.numeric(min_para$p)
+
+```
+
+```{r}
+ncd_cv_R_newdat_1se_para = ncd_cv_R_newdat_1se_para %>% mutate(p2 = unlist(lapply(ncd_cv_R_newdat_1se_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p3 = unlist(lapply(ncd_cv_R_newdat_1se_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   rho = unlist(lapply(ncd_cv_R_newdat_1se_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   rep = unlist(lapply(ncd_cv_R_newdat_1se_para$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+se_para = ncd_cv_R_newdat_1se_para %>% group_by(p-1,p2,rho) %>% summarise(lambda0_mean = mean(lambda0),
+                                                           non_zero_mean = mean(non_zeros),
+                                                           sec_mean = mean(sec),
+                                                           acc_mean = mean(acc),
+                                                           sens_mean = mean(sens),
+                                                           spec_mean = mean(spec))
+
+names(se_para)[1] = 'p'
+se_para$p2p = as.numeric(se_para$p2) / as.numeric(se_para$p)
+
+```
+
+# Average time comparison
+From the graph, we can see there's a huge drop in the average running with parallel computation enabled. 
+```{r}
+time_dat_para <- as.data.frame(cbind(min$p,min$p2p,min$rho,min$sec_mean,min_para$sec_mean)) %>% set_names(c('p','p2','rho','min','min_para'))
+
+time_dat_para  %>% pivot_longer(c(min,min_para), names_to = 'type',values_to = 'run_time') %>% 
+  ggplot(aes(x=as.numeric(p),y=as.numeric(run_time),color=type)) + geom_smooth(se=F) +
+  scale_linetype_manual(values = c("0.1" = "solid", "0.5" = "dashed",'0.9' = 'dotted')) +
+  facet_grid(~rho,labeller = labeller(rho = rho.labs)) + labs(x='P',y='Running Time',color='CV Type',title = 'Summary of Running Time Using Parallel Computation')
+```
+
 ```{r eval=F}
 # Export
 tables <- list(tbl1 = r, tbl2 = min, tbl3=se)
