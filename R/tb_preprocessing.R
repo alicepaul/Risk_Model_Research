@@ -1,7 +1,5 @@
 suppressMessages(library(tidyverse))
 
-tb_df <- read.csv("~/Documents/GitHub/Risk_Model_Research/tb_data/Peru_TB_data.csv")
-
 tb_preprocessing <- function(tb_df) {
   
   # we choose to look at whether 100% of doses are taken on time 
@@ -85,7 +83,7 @@ tb_preprocessing <- function(tb_df) {
   
   # model matrix and save
   tb_matrix <- model.matrix(adherence_outcome ~ ., data=tb_df)
-  tb_matrix <- cbind(tb_matrix, tb_df$adherence_outcome)
+  tb_matrix <- cbind(tb_matrix, adherence_outcome = tb_df$adherence_outcome)
   
   return(tb_matrix)
 }
