@@ -1,7 +1,7 @@
 source("utils.R")
 source("helper_functions.R")
 suppressMessages(library(tidyverse))
-require(foreach)
+suppressMessages(require(foreach))
 
 # Update documentation
 
@@ -271,26 +271,34 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   
   # save model score card
   nonzero_beta <- beta[beta != 0][-1]
-  model_card <- data.frame(Points = nonzero_beta)
-  
-  # get range of possible scores
-  X_nonzero <- X[,which(beta != 0)]
-  X_nonzero <- X_nonzero[,-1]
-  vals <- list()
-  for (i in 1:ncol(X_nonzero)) {
-    vals[[i]] <- nonzero_beta[i] * c(min(X_nonzero[,i]), max(X_nonzero[,i]))
+  if (length(nonzero_beta) <= 1) {
+    model_card <- NULL
+    score_map <- NULL
+  } else {
+    model_card <- data.frame(Points = nonzero_beta)
+    
+    # get range of possible scores
+    X_nonzero <- X[,which(beta != 0)]
+    X_nonzero <- X_nonzero[,-1]
+    min_pts <- rep(NA, length(nonzero_beta))
+    max_pts <- rep(NA, length(nonzero_beta))
+    for (i in 1:ncol(X_nonzero)) {
+      temp <- nonzero_beta[i] * c(min(X_nonzero[,i]), max(X_nonzero[,i]))
+      min_pts[i] <- min(temp)
+      max_pts[i] <- max(temp)
+    }
+    
+    score_range <- seq(sum(min_pts), sum(max_pts))
+    
+    # map scores to risk
+    v <- gamma*(beta[1] + score_range)
+    p <- exp(v)/(1+exp(v))
+    
+    # save score map
+    score_map <- data.frame(Score = score_range, 
+                            Risk = round(100*p,1))
   }
-  combinations <- expand.grid(vals)
-  scores <- unique(rowSums(combinations))
-  score_range <- seq(min(scores), max(scores))
   
-  # map scores to risk
-  v <- gamma*(beta[1] + score_range)
-  p <- exp(v)/(1+exp(v))
-  
-  # save score map
-  score_map <- data.frame(Score = score_range, 
-                          Risk = round(100*p,1))
   
   # Return risk_mod object
   mod <- list(gamma=gamma, beta=beta, glm_mod=glm_mod, X=X, y=y, weights=weights,
@@ -326,8 +334,13 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
                         tol= 1e-5, nlambda = 25, 
                         lambda_min_ratio = ifelse(nrow(X) < ncol(X), 0.01, 1e-04), 
-                        lambda0 = NULL, nfolds = 10, foldids = NULL, parallel=F) {
-  nfolds=5
+                        lambda0 = NULL, nfolds = 10, foldids = NULL, parallel=F,
+                        seed = NULL) {
+  
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  
   # Get folds 
   if (is.null(foldids) & is.null(nfolds)) stop("Must provide foldids or nfolds")
   if (is.null(foldids)){
@@ -365,7 +378,6 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   
   # Function to run for single fold and lambda0
   fold_fcn <- function(l0, foldid){
-    foldid=2
     X_train <- X[foldids != foldid, ]
     y_train <- y[foldids != foldid]
     weight_train <- weights[foldids != foldid]
