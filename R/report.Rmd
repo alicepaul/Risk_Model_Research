@@ -1,0 +1,143 @@
+---
+title: "Predicting TB Medication Adherence Using a Risk Score Model"
+date: "November 2023"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(knitr)
+library(xtable)
+source('risk.R')
+```
+
+# Data Preprocessing 
+
+In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. The raw data includes two continuous outcome variables -- `PCTadherence` and `PCT_adherence_sensi`. Both measure the percentage of doses taken on time, the former calculating this by recorded number of doses missed and the latter calculating this by treatment length and expected treatment length. To make these outcomes binary, we'll need to define a cutoff above which we'll consider the patient "adherent". Ideally, there should be approximately equal numbers of patients in the "adherent" and "non-adherent" groups. Table 1 explores the class imbalance when using a cutoff of 100% (where a patient must have 100% adherence to be considered "adherent"). We observe better balance when using the `PCTadherence_sensi` variable, with 39.1% of patients classified as "non-adherent" (n = 110) and 60.2% of patients classified as "adherent" (n = 154). We will dichotomize the `PCTadherence_sensi` variable and move forward with this as the outcome of interest. 
+
+
+```{r}
+tb_df <- read.csv("/Users/hannaheglinton/Library/CloudStorage/OneDrive-BrownUniversity/Thesis/Data/Peru_TB_data.csv")
+
+data.frame(some_missed = c(sum(tb_df$PCTadherence < 100, na.rm = TRUE),
+                           sum(tb_df$PCTadherence_sensi < 100, na.rm  = TRUE)),
+           none_missed = c(sum(tb_df$PCTadherence == 100, na.rm = TRUE),
+                           sum(tb_df$PCTadherence_sensi == 100, na.rm  = TRUE)),
+           missing = c(sum(is.na(tb_df$PCTadherence)),
+                       sum(is.na(tb_df$PCTadherence_sensi))),
+           row.names = c("PCTadherence", "PCTadherence_sensi"))  %>%
+  kable(col.names = c("<100% Adherence", "100% Adherence", "Missing"),
+        caption = "Patient Count by Dichotomized Outcome")
+  
+  
+```
+
+The raw data includes 64 potential covariates. We dropped `PTID2`, `hunger_freq`, `health_ctr`, and `post_tb_pt_work` because they were either not listed in the data dictionary or were listed with a note that they should not be included in the model. We summarized the family support, evaluation of health services, motivation, and TB disinformation variables by taking the median value for each category. 
+
+The data dictionary noted that `pills` variable was coded as 1 for 0-3 pills, 2 for 4-6 pills, 3 for 7-9 pills, 4 for 10-11 pills, and 5 for 12+ pills. However, the values in the data were 0.25, 0.50, 0.75, and 1.00. We converted this variable to the scale in the data dictionary by multiplying each value by 4. However, note that this results in no values of 5 in the cleaned data (indicating no subjects taking 12+ pills). The `adr_freq` variable also needed to be multiplied by 4 for the same reason. In this variable's case, all values listed in the data dictionary (0, 1, 2, 3, and 4) are present in the transformed data. 
+
+There were four continuous variables that were converted to categorical using the following cutoffs (selected based on class balance): 
+
+* `age_BLchart`: <16 years, 16-17 years, 18+ years
+* `audit_cat`: 0, >0 
+* `ace_cat`: 0, 1, >1 
+* `tx_mos_cat`: $\le6$ months, >6 months
+
+The categorical variables `ram` and `regular_drug` were dropped because they each had only 5 patients responding with "yes". The variables `edu_level_mom` and `edu_level_dad` could potentially be combined, but they were not included in the data dictionary so they were dropped. The `monitor1` variable was also dropped because it was not clear how to relevel it. 
+
+The preprocessed dataset contains 41 covariates, which includes the dummy variables for categorical covariates. 
+
+
+```{r}
+source('tb_preprocessing.R')
+df <- tb_preprocessing(tb_df)
+```
+
+
+
+# Model Fitting 
+
+Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we run cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance. The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the $\lambda_0$ producing the lowest mean deviance results in a model with 4 features. 
+
+```{r, out.width="75%", fig.align = 'center'}
+X <- as.matrix(df[, -ncol(df)])
+y <- df[, ncol(df)]
+
+# CV
+# get folds
+folds <- stratify_folds(y, nfolds = 5, seed = 5)
+
+cv_results <- cv_risk_mod(X, y, foldids = folds)
+
+plot(cv_results, lambda_text = FALSE) + 
+  labs(title = "Figure 1. Cross Validation Results")
+
+
+```
+
+The four features that this model selected were `lives_w_mom`, `health_svc_median`, `motiv_median`, `tx_mos_cat_>6mos`. The score card is shown in Table 2, where the total score for a patient can be calculated by multiplying each variable response by the number of points shown on the right. For example, if a patient lived with their mom, had a median health services score of 4, had a median motivation score of 3.5, and their treatment lasted 3 months, their total score would be $1(-7) + 4(1) + 3.5(-2) + 0(10) = -10$. Table 3 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk would be 35.9%. 
+
+
+```{r}
+mod <- risk_mod(X, y, lambda0 = cv_results$lambda_min)
+
+```
+
+```{r}
+
+
+
+data.frame(mod$model_card, row.names = c("Lives with Mom (0/1)", 
+                    "Median Health Services Score (1-5)",
+                    "Median Motivation Score (1-5)",
+                    "Treatment Lasted >6 Months (0/1)")) %>%
+  
+
+kable(caption = "Score Card" )
+
+
+#kable(card$score_map, caption = "Map Score to Risk of Non-Adherence")
+
+score_map1 <- mod$score_map[1:13,]
+score_map2 <- mod$score_map[14:26,]
+blank <- rep("", nrow(score_map1))
+
+kable(cbind(score_map1, blank, score_map2), caption = "Map Score to Risk of Non-Adherence", col.names = c("Score", "Risk", "    ", "Score", "Risk"))
+
+```
+
+
+```{r, out.width = "75%", fig.align='center'}
+
+ggplot() + 
+  geom_point(data = mod$score_map, aes(x = Score, y = Risk/100), size = 1) +
+  geom_function(data = data.frame(x = seq(-60,50)), aes(x), 
+                fun = function(x) (exp(0.4639 + 0.10455*x))/(1 + exp(0.4639 + 0.10455*x))) + 
+  labs(x = "Score", y = "Risk", title = "Risk Score Model") +
+  scale_x_continuous(breaks = seq(-60, 50, 10)) + 
+  scale_y_continuous(breaks = seq(0, 1, 0.10)) + 
+  theme_bw()
+```
+
+
+
+
+# Model Evaluation 
+
+
+\pagebreak
+
+# EDA Appendix
+
+
+\pagebreak
+
+# Code Appendix
+
+
+```{r  ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE, include=TRUE}
+
+```
+
+

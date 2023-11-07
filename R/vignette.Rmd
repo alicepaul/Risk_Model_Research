@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+library(knitr)
 
 set.seed(1)
 ```
@@ -19,11 +20,19 @@ set.seed(1)
 
 ## Introduction 
 
-Risk scores are sparse linear models that map an integer linear combination of covariates to the probability of an outcome occurring. Unlike regression models, risk score models use small integer coefficients and dichotomous variables. These characteristics allow risk score predictions to be easily computed by adding or subtracting a few small numbers. 
+Risk scores are sparse linear models that map an integer linear combination of covariates to the probability of an outcome occurring. Unlike regression models, risk score models consist of integer coefficients for often dichotomous variables. This allows risk score predictions to be easily computed by adding or subtracting a few small numbers. 
 
-However, risk scores developed heuristically by altering logistic regression models have decreased performance, as there is a fundamental trade-off bewteen the model's simplicity and its predictive accuracy. This package presents an optimization approach to learning risk scores, where the constraints unique to risk scores are integrated into the model-fitting process, rather than implemented afterward. 
+Risk scores developed heuristically by altering logistic regression models have decreased performance, as there is a fundamental trade-off between the model's simplicity and its predictive accuracy. In contrast, this package presents an optimization approach to learning risk scores, where the constraints unique to risk score models are integrated into the model-fitting process, rather than implemented afterward. This vignette demonstrates how to use the `riskscore` package to build a risk score model to predict breast cancer diagnosis. 
 
-The {packagename} package uses a cyclical coordinate descent algorithm to solve the following optimization problem.
+
+```{r, eval = FALSE}
+library(riskscore)
+
+```
+
+## Optimization Problem
+
+The `riskscore` package uses a cyclical coordinate descent algorithm to solve the following optimization problem.
 
 \begin{equation}
 \begin{aligned}
@@ -34,77 +43,159 @@ The {packagename} package uses a cyclical coordinate descent algorithm to solve 
 \end{aligned}
 \end{equation}
 
-This vignette demonstrates how to use the {packagename} R package to build risk score models using an application in medication adherence. 
-
-```{r, eval = FALSE}
-library(packagename)
-
-```
+These constraints ensure that the model will be sparse and include only integer coefficients. 
 
 ## Loading Example Data
 
-First we'll load the example dataset that comes with the {packagename} package. This dataset contains information about adolescents in Peru prescribed tuberculosis (TB) medication. We want to develop a risk score model that predicts adherence to TB medication. 
+First we'll load in an example dataset. In this example, we want to develop a risk score model that predicts whether a breast tissue sample is benign using features recorded during a biopsy. The `breastcancer` dataset was originally accessed from the [UCI Repository](https://archive.ics.uci.edu/dataset/15/breast+cancer+wisconsin+original) and can be loaded into your environment from the `riskscore` package as so: 
 
 ```{r, eval = FALSE}
-data("tb_data_raw")
+data("breastcancer")
 
 ```
+
+This dataset contains 683 observations and 9 features. Our goal is to develop a risk score model that predicts whether a breast tissue sample is benign using 9 (or fewer) features recorded during a biopsy: \
+
+1. Clump thickness \
+2. Uniformity of cell size \
+3. Uniformity of cell shape \
+4. Marginal adhesion \
+5. Single epithelial cell size \
+6. Bare nuclei \
+7. Bland chromatin \
+8. Normal nucleoli \
+9. Mitoses \
+
 
 ## Data Preprocessing
 
-Before building the risk score model, we need to preprocess the data. We'll determine our binary outcome and ensure that all variables are coded as integer or near integer values. For this example, we'll choose an outcome that is coded as 1 if the subject took all doses on time and as 0 if the subject missed any doses. 
+Before building a risk score model, data often need to be preprocessed. Specifically, the dataset needs to have a binary outcome with all other variables containing either binary or integer values. 
 
+The `breastcancer` dataset has already been preprocessed. However, we'll still need to split out our data into a matrix with all covariates (`X`) and a vector with the outcome data (`y`). In this case, the first column in our dataset contains the outcome variable (`benign`). We also add to `X` a column representing the intercept (i.e. a column containing all 1s).
 
  
 ```{r, echo = FALSE}
-tb_data_raw <- read.csv("~/Documents/GitHub/Risk_Model_Research/tb_data/Peru_TB_data.csv")
-source('tb_preprocessing.R')
+df <- read.csv("~/Documents/GitHub/Risk_Model_Research/data/breastcancer_data.csv")
 ```
 
-```{r}
-tb_data <- tb_preprocessing(tb_data_raw)
-```
 
 ```{r, echo = FALSE}
+set.seed(1)
 source('risk.R')
 ```
 
-Additionally, we'll need to split out our data into a matrix with all covariates ("X") and a vector with the outcome data ("y"). In this case, the last column in our dataset contains the outcome variable. 
+
 
 ```{r}
-X <- as.matrix(tb_data[, -ncol(tb_data)])
-y <- tb_data[, ncol(tb_data)]
+y <- df[[1]]
+X <- as.matrix(df[,2:ncol(df)])
+X <- cbind(rep(1,nrow(X)), X) # add intercept column
 ```
 
 ## Cross Validation
 
-The penalty coefficient $\lambda_0$ controls the amount of regularization -- a larger value of $\lambda_0$ will result in fewer non-zero coefficients. We can use cross validation to find the optimal $\lambda_0$ value that creates a sufficiently sparse model without sacrificing performance. 
+The penalty coefficient $\lambda_0$ controls the sparsity of the model -- a larger value of $\lambda_0$ will result in fewer non-zero coefficients. We can use cross validation to find the optimal $\lambda_0$ value that creates a sufficiently sparse model without sacrificing performance. 
 
-
+The `cv_risk_mod()` runs cross validation for a grid of possible $\lambda_0$ values. If the user does not specify the vector of $\lambda_0$ values to test, the program constructs this $\lambda_0$ sequence. The maximum $\lambda_0$ tested is the smallest value such that all coefficients are zero. The minimum $\lambda_0$ value is calculated using the user-defined `lambda_ratio` argument. The $\lambda_0$ sequence is created by generating `nlambda` values linear on the log scale from the minimum $\lambda_0$ to the maximum $\lambda_0$. We've set `nlambda` to 25, so the program will construct an appropriate sequence of 25 $\lambda_0$ values to test using cross validation. 
 
 ```{r}
-cv_results <- cv_risk_mod(X, y, nfolds = 5, nlambda = 25)
+cv_results <- cv_risk_mod(X, y, nfolds = 5, nlambda = 25, seed = 1)
 ```
 
 
-The `cv_risk_mod()` function returns a `cv_risk_mod` object that contains a dataframe with the deviance, accuracy, and number of nonzero coefficients for each value of $\lambda_0$. The object also contains `lambda_min`, the value of $\lambda_0$ that returned the smallest mean deviance across all folds, and `lambda_1se`, the maximum $\lambda_0$ that had a mean deviance within one standard deviation of `lambda_min`. 
 
-If the user does not specify a vector of $\lambda_0$ values to test, the program constructs the $\lambda_0$ sequence. The maximum $\lambda_0$ value is the smallest value such that all coefficients are zero. The minimum $\lambda_0$ value is calculated using the user-defined `lambda_ratio` argument. 
+Running `plot()` on a `cv_risk_mod` object creates a plot of mean deviance for each $\lambda_0$ value. The number of nonzero coefficients that are produced by each $\lambda_0$ value when fit on the full data are listed at the top of the plot. The $\lambda_0$ value with the lowest mean deviance ("lambda_min") is indicated in red, and its standard deviation is marked with a red dashed line.  In our example, the $\lambda_0$ that resulted in the lowest mean deviance creates a model with 7 nonzero coefficients. Its precise value can be accessed by calling `cv_results$lambda_min`. If we want a sparser model, we could increase $\lambda_0$ to "lambda_1se", the largest value whose mean deviance is within one standard error of "lambda_min". This value can be accessed by calling `cv_results$lambda_1se`. 
 
-The `plot_cv_results()` function creates a plot of mean deviance for each $\lambda_0$ value. The `lambda_min` value is indicated in red, with it's standard deviation as a dotted line. The number of nonzero coefficients that are produced by the $\lambda_0$ value when fit on the full data are listed at the top of the plot. 
-
-```{r, fig.width = 6, fig.height = 3}
-plot_cv_results(cv_results)
+```{r, fig.width = 5, fig.height = 3, dpi = 125}
+plot(cv_results)
 ```
+
+To view a dataframe with the full cross-validation results (including both deviance and accuracy metrics), run `cv_results$results`.  
 
 
 ## Fit Risk Score Model
 
+We'll fit a model on the full data using the function `risk_mod()`. We'll use the "lambda_min" value determined by cross-validation as our $\lambda_0$ parameter.  
+
 ```{r}
 mod <- risk_mod(X, y, lambda0 = cv_results$lambda_min)
 
+```
+
+The integer risk score model can be viewed by calling `mod$model_card`. The risk score can be calculated by multiplying each covariate value by its respective number of points and then adding points together. 
+
+```{r, echo = FALSE}
+mod$model_card %>%
+  kable(caption = "`mod$model_card`")
+```
+
+Each score can then be mapped to a risk probability. The `mod$score_map` data frame maps an integer range of scores to their associated risk. For this example dataset, `mod$score_map` includes a range of integer scores from 51 to 510, which are the minimum and maximum scores possible with this model. The table below shows a sample of these scores. 
+
+```{r, echo = FALSE}
+mod$score_map %>%
+  filter(Score %in% seq(50, 300, 50)) %>%
+  kable(caption = "`mod$score_map`")
+```
+
+The relationship between the scores and their associated risks can be visualized by plotting `mod$score_map`. 
+
+```{r, fig.width = 5, fig.height = 3, dpi = 125}
+plot(mod$score_map, type = "l")
+```
+
+
+A `glm` object for this logistic regression equation can be called using `mod$glm_mod`. Equivalently, the regression equation coefficients can be calculated directly from the risk score model by multiplying the risk score coefficients (`mod$beta`) by the $\gamma$ value (`mod$gamma`). 
+
+```{r}
+coef(mod$glm_mod)
+
+
+mod$beta * mod$gamma
+
+```
+
+
+
+
+
+Running `summary()` on our model will return the intercept, the scores of each nonzero coefficient, the $\gamma$ multiplier value, the $\lambda_0$ regularizer value, the deviance, and the AIC.
+
+```{r}
 summary(mod)
 ```
+
+Other generic functions that can be called on `risk_mod` objects include `coef()` and `predict()`. In addition to the typical options for the `type` parameter of "link" and "response", running `predict()` on a `risk_mod` object also includes the option of "score", which returns each subject's risk score. 
+
+The table below compares the three possible outputs from `predict()` for ten example subjects. The first seven columns contain data for clump thickness, uniformity of cell shape, marginal adhesion, bare nuclei, bland chromatin, normal nucleoli, and mitosis. 
+
+```{r, echo = FALSE}
+
+
+link <- predict(mod, type = "link")[1:5] %>%
+  round(2)
+response <- predict(mod, type = "response")[1:5] %>%
+  round(3)
+score <- predict(mod, type = "score")[1:5]
+
+data.frame(X[1:5,which(dimnames(X)[[2]] %in% c("ClumpThickness",
+                                             "UniformityOfCellShape",
+                                             "MarginalAdhesion", "BareNuclei",
+                                             "BlandChromatin", "NormalNucleoli",
+                                             "Mitoses"))],
+                       score, link, response) %>%
+  kable(col.names = c("CT", "USC", "MA", "BN", "BC", "NN", "M",
+                     "Score", "Link", "Response"),
+        caption = "Score, Link, and Response Values for 5 Example Observations")
+
+```
+
+The "score" is a linear combination of the covariates: 
+$$score = 10(CT) + 6(USC) + 6(MA) + 7(BN) + 8(BC) + 4(NN) + 10(M)$$
+
+The "link" uses the logistic regression equation:
+$$link = -10.04 + 0.56(CT) + 0.33(UCS) + 0.34(MA) + 0.39(BN) + 0.45(BC) + 0.22(NN) + 0.56(M)$$
+
+The "response" converts these link values to probabilities: $$response = e^{link}/(1+e^{link})$$. 
 
 
 

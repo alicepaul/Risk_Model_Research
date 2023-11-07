@@ -1,7 +1,7 @@
 source("utils.R")
 source("helper_functions.R")
-library(tidyverse) 
-require(foreach)
+suppressMessages(library(tidyverse))
+suppressMessages(require(foreach))
 
 # Update documentation
 
@@ -262,12 +262,47 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
   gamma <- res$gamma
   beta <- res$beta
   
-  # Convert to GLM object and return
+
+  
+  # Convert to GLM object
   glm_mod <- glm(y~.-1, family = "binomial", weights = weights, 
       start = gamma*beta, method=glm_fit_risk, data = df)
   names(beta) <- names(coef(glm_mod))
+  
+  # save model score card
+  nonzero_beta <- beta[beta != 0][-1]
+  if (length(nonzero_beta) <= 1) {
+    model_card <- NULL
+    score_map <- NULL
+  } else {
+    model_card <- data.frame(Points = nonzero_beta)
+    
+    # get range of possible scores
+    X_nonzero <- X[,which(beta != 0)]
+    X_nonzero <- X_nonzero[,-1]
+    min_pts <- rep(NA, length(nonzero_beta))
+    max_pts <- rep(NA, length(nonzero_beta))
+    for (i in 1:ncol(X_nonzero)) {
+      temp <- nonzero_beta[i] * c(min(X_nonzero[,i]), max(X_nonzero[,i]))
+      min_pts[i] <- min(temp)
+      max_pts[i] <- max(temp)
+    }
+    
+    score_range <- seq(sum(min_pts), sum(max_pts))
+    
+    # map scores to risk
+    v <- gamma*(beta[1] + score_range)
+    p <- exp(v)/(1+exp(v))
+    
+    # save score map
+    score_map <- data.frame(Score = score_range, 
+                            Risk = round(100*p,1))
+  }
+  
+  
+  # Return risk_mod object
   mod <- list(gamma=gamma, beta=beta, glm_mod=glm_mod, X=X, y=y, weights=weights,
-                 lambda0 = lambda0)
+              lambda0 = lambda0, model_card = model_card, score_map = score_map)
   class(mod) <- "risk_mod"
   return(mod)
 }
@@ -299,8 +334,13 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
                         tol= 1e-5, nlambda = 25, 
                         lambda_min_ratio = ifelse(nrow(X) < ncol(X), 0.01, 1e-04), 
-                        lambda0 = NULL, nfolds = 10, foldids = NULL, parallel=F) {
-  nfolds=5
+                        lambda0 = NULL, nfolds = 10, foldids = NULL, parallel=F,
+                        seed = NULL) {
+  
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  
   # Get folds 
   if (is.null(foldids) & is.null(nfolds)) stop("Must provide foldids or nfolds")
   if (is.null(foldids)){
@@ -338,7 +378,6 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   
   # Function to run for single fold and lambda0
   fold_fcn <- function(l0, foldid){
-    foldid=2
     X_train <- X[foldids != foldid, ]
     y_train <- y[foldids != foldid]
     weight_train <- weights[foldids != foldid]
@@ -398,40 +437,6 @@ cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100,
   return(cv_obj)
 }
 
-#' Get model scores and associated risks
-#'
-#'Summarizes the number of points per feature and maps the each possible total 
-#'score to its associated risk.
-#' @param object an object of class "risk_mod", usually a result of a call to risk_mod()
-#' @return model_card and score_map dataframes returned in a list
-get_model_card <- function(object) {
-  
-  # get coefficients
-  intercept <- object$beta[1]
-  nonzero_beta <- object$beta[object$beta != 0][-1]
-  n_nonzero <- length(nonzero_beta)
-  
-  # save model score card
-  model_card <- data.frame(Points = nonzero_beta)
-
-  # find all possible scores
-  all_combinations <- expand.grid(rep(list(0:1), n_nonzero))
-  for (i in 1:n_nonzero) {
-    all_combinations[all_combinations[,i] == 1, i] <- nonzero_beta[i]
-  }
-  all_scores <- unique(rowSums(all_combinations)) %>% sort()
-  
-  # map scores to risk
-  v <- mod$gamma*(intercept + all_scores)
-  p <- exp(v)/(1+exp(v))
-  
-  # save score-to-risk map
-  score_map <- data.frame(Score = all_scores, 
-                          Risk = round(100*p,1))
-
-  return(list(model_card = model_card, score_map = score_map))
-}
-
 
 #' Summarize Risk Model Fits
 #'
@@ -453,7 +458,7 @@ summary.risk_mod <- function(object) {
   cat("\n")
   
   cat("Gamma (multiplier): ", object$gamma, "\n")
-  cat("Lambda (regularizer): ", object$lambda0, "\n")
+  cat("Lambda (regularizer): ", object$lambda0, "\n\n")
   cat("Deviance: ", object$glm_mod$deviance, "\n")
   cat("AIC: ", object$glm_mod$aic, "\n\n")
   
@@ -519,11 +524,21 @@ predict.risk_mod <- function(object, newdata = NULL,
 #' lambda_min and lambda_1se values returned by cross-validation. Set 
 #' lambda_text = FALSE to remove text from plot. 
 #' @return ggplot object 
-plot_cv_results <- function(object, lambda_text = FALSE) {
+plot.cv_risk_mod <- function(object, lambda_text = FALSE) {
   
   # get mean/sd deviance of lambda_min
   min_mean <- object$results$mean_dev[object$results$lambda0 == object$lambda_min]
   min_sd <- object$results$sd_dev[object$results$lambda0 == object$lambda_min]
+  
+  # define x axis breaks
+  lambda_grid <- log(object$results$lambda0)
+  nlambda <- length(lambda_grid)
+  nonzero_seq <- object$results$nonzero
+  if (nlambda > 25) {
+    new_n <- ceiling(nlambda/25)
+    lambda_grid <- lambda_grid[seq(1, nlambda, new_n)]
+    nonzero_seq[-seq(1, nlambda, new_n)] <- ""
+  }
   
   # create plot 
   cv_plot <- ggplot(object$results,aes(x = log(lambda0), y = mean_dev)) + 
@@ -534,13 +549,17 @@ plot_cv_results <- function(object, lambda_text = FALSE) {
                        ymax= min_mean + min_sd), color = "red", inherit.aes = FALSE) +
     geom_hline(yintercept = min_mean + min_sd, linetype = "dashed", color = "red") + 
     
-    geom_text(aes(x = log(lambda0), label = nonzero, 
+    geom_text(aes(x = log(lambda0), label = nonzero_seq, 
                   y = (max(mean_dev) + max(sd_dev))*1.01),
-              size = 2.5, col = 'grey30') +
+              size = 3, col = 'grey30') +
     
     geom_lambda(lambda_text, object) +
+    scale_x_continuous(breaks = lambda_grid, labels = round(lambda_grid, 1)) + 
     labs(x = "Log Lambda", y = "Deviance") + 
-    theme_minimal()
+    theme_bw() + 
+    theme(panel.grid.minor = element_blank(),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) 
+    
   
   return(cv_plot)
 }
@@ -564,3 +583,26 @@ geom_lambda <- function(lambda_text = TRUE, object) {
              hjust = 0)  
 }
 
+#' Assign stratified fold ids
+#'
+#' Returns a vector of fold ids with an equal percentage of samples for each class
+#' @param y numeric vector for the response variable (binomial)
+#' @param nfolds number of folds (default 10)
+#' @return vector with the same length as y
+stratify_folds <- function(y, nfolds = 10, seed = NULL) {
+  
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  index_y0 <- which(y == 0)
+  index_y1 <- which(y == 1)
+  folds_y0 <- sample(rep(seq(nfolds), length = length(index_y0)))
+  folds_y1 <- sample(rep(seq(nfolds), length = length(index_y1)))
+  
+  foldids <- rep(NA, nrow(X))
+  foldids[index_y0] <- folds_y0
+  foldids[index_y1] <- folds_y1
+  
+  return(foldids)
+}
