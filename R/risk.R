@@ -606,3 +606,19 @@ stratify_folds <- function(y, nfolds = 10, seed = NULL) {
   
   return(foldids)
 }
+
+#' Get risk from score 
+#'
+#' Returns the risk probabilities for the provided score values
+#' @param object an object of class "risk_mod", usually a result of a call to 
+#' risk_mod()
+#' @param score numeric vector with score value(s)
+#' @return numeric vector with the same length as `score`
+get_risk <- function(mod, score) {
+  
+  risk <- exp(mod$gamma*(mod$beta[[1]] + score))/
+    (1+exp(mod$gamma*(mod$beta[[1]] + score)))
+  
+  return(risk)
+  
+}
