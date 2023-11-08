@@ -29,7 +29,7 @@ df <- read.csv(paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/MILP/sm
 # Set data matrix
 y <- df[[1]]
 X <- as.matrix(df[,2:ncol(df)])
-
+k
 
 # Warm start solution
 n = nrow(X)
