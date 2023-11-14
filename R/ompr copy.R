@@ -29,10 +29,10 @@ df <- read.csv(paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/MILP/da
 
 # Set data matrix
 # works out fine for 1:5, errors when trying yo increase sample size
-df <- df[100:105,]
+df <- df[1:50,]
 y <- df[[1]]
 X <- as.matrix(df[,2:ncol(df)])
-
+#X[,7] <- 1
 
 # Warm start solution
 n = nrow(X)
@@ -47,6 +47,7 @@ SK_pool = c((-5*p) : (5*p)) # Determined by lb and ub of beta
 PI = seq(0,1,length=100) # Equally spaced between 0,1, length = 100 
 # Delete 0 and 1 so that obj can take log
 PI <- PI[-c(1,100)]
+PI[1]
 
 t1 = Sys.time()
 # Model description 
@@ -106,15 +107,15 @@ t(as.matrix(beta[,3])) %*% as.matrix(X[2,])
 t(as.matrix(beta[,3])) %*% as.matrix(X[3,])
 
 
-# First K for every i k == 50
+# 
 zik <- MILP_V2 %>% get_solution(z_ik[i,k])
 zik %>% filter(value==1)
 zik %>% group_by(i) %>% summarise(w <- sum(value))
-# First l for every k
+# 
 zkl <- MILP_V2 %>% get_solution(z_kl[k,l]) 
 zkl %>% group_by(k) %>% summarise(w <- sum(value))
 zkl %>% filter(value==1)
-# first l for every i
+# 
 pil <- MILP_V2 %>% get_solution(p_il[i,l]) 
 pil %>% filter(value==1)
 
@@ -125,7 +126,7 @@ pil %>% filter(value==1)
 MILP_V2$objective_value
 
 # Based on the MILP, Beta = 0,0,-50,0,0,0,0,0,0,0 ; S = -50,-50,-50,-50,-50 ; optimal k <- 1, l <- 59
-- (log(PI[66]) * sum(y==1) + log(1-PI[66]) * sum(y!=1))
+- (log(PI[40]) * sum(y==1) + log(1-PI[40]) * sum(y!=1))
 
 
 # Results from risk.mod
