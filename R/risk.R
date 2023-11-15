@@ -329,6 +329,9 @@ risk_mod <- function(X, y, gamma = NULL, beta = NULL, weights = NULL,
 #' @param foldids optional vector of values between 1 and nfolds (default NULL)
 #' @param parallel If \code{TRUE}, use parallel \code{foreach} to fit each fold.  
 #' Must register parallel before hand, such as \code{doParallel} or others.
+#' @param seed An integer that is used as argument by the set.seed() for
+#' offsetting the random number generator. Default is to leave the random number
+#' generator alone.
 #' @return class of cv_risk_mod with a list containing a data.frame of results
 #' along with the lambda_min and lambda_1se
 cv_risk_mod <- function(X, y, weights = NULL, a = -10, b = 10, max_iters = 100, 
@@ -600,7 +603,7 @@ stratify_folds <- function(y, nfolds = 10, seed = NULL) {
   folds_y0 <- sample(rep(seq(nfolds), length = length(index_y0)))
   folds_y1 <- sample(rep(seq(nfolds), length = length(index_y1)))
   
-  foldids <- rep(NA, nrow(X))
+  foldids <- rep(NA, length(y))
   foldids[index_y0] <- folds_y0
   foldids[index_y1] <- folds_y1
   
@@ -613,11 +616,14 @@ stratify_folds <- function(y, nfolds = 10, seed = NULL) {
 #' @param object an object of class "risk_mod", usually a result of a call to 
 #' risk_mod()
 #' @param score numeric vector with score value(s)
+#' @param seed An integer that is used as argument by the set.seed() for
+#' offsetting the random number generator. Default is to leave the random number
+#' generator alone.
 #' @return numeric vector with the same length as `score`
-get_risk <- function(mod, score) {
+get_risk <- function(object, score) {
   
-  risk <- exp(mod$gamma*(mod$beta[[1]] + score))/
-    (1+exp(mod$gamma*(mod$beta[[1]] + score)))
+  risk <- exp(object$gamma*(object$beta[[1]] + score))/
+    (1+exp(object$gamma*(object$beta[[1]] + score)))
   
   return(risk)
   

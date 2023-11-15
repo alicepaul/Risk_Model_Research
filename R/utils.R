@@ -101,7 +101,7 @@ glm_fit_risk <- function (x, y, weights = rep(1, nobs), start = NULL,
     resdf  <- n.ok - rank
     
     ## calculate AIC
-    aic.model <- aic(y, n, mu, weights, dev) + 2*rank
+    aic.model <- aic(y, n.ok, mu, weights, dev) + 2*rank
     
     # return list
     list(coefficients = coef, residuals = residuals, fitted.values = mu,
