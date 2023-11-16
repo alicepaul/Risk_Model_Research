@@ -81,11 +81,16 @@ tb_preprocessing <- function(tb_df) {
   # included in data documentation and unclear best way to relevel
   tb_df <- tb_df %>% select(-c(edu_level_mom, edu_level_dad, monitor1))
   
+  return(tb_df)
+}
+
+tb_as_matrix <- function(tb_df) {
+  
   # model matrix and save
   tb_matrix <- model.matrix(adherence_outcome ~ ., data=tb_df)
   tb_matrix <- cbind(tb_matrix, adherence_outcome = tb_df$adherence_outcome)
   
   return(tb_matrix)
+  
 }
-
 
