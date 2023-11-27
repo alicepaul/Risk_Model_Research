@@ -29,7 +29,7 @@ df <- read.csv(paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/MILP/da
 
 # Set data matrix
 # works out fine for 1:5, errors when trying yo increase sample size
-df <- df[1:10,]
+df <- df[10:20,1:5]
 y <- df[[1]]
 X <- as.matrix(df[,2:ncol(df)])
 
@@ -54,30 +54,44 @@ t1 = Sys.time()
 # Model description 
 MILP_V2 <- MIPModel() %>% 
   # Integer coefficients for attributes
-  add_variable(beta[j], j=1:p, type = 'integer') %>% 
+  add_variable(beta[j], j=1:p, type = 'integer', up=5,lb=-5) %>% 
   # Predicted Risk Score from the integer coefficients 
-  add_variable(s[i], i= 1:n, type = 'integer') %>% 
+  add_variable(s[i], i= 1:n, type = 'integer',up=10,lb=-10) %>% 
   # Exchanged this line on 11.8.2023
   add_constraint(sum_over(beta[j]*X[i,j], j=1:p) - s[i] == 0,i=1:n) %>%  
   # Indicator of S_i = k, k: one potential score from the score pool
   add_variable(z_ik[i,k], i=1:n, k=1:length(SK_pool), type = 'binary') %>% 
   add_constraint(sum_over(z_ik[i,k], k = 1:length(SK_pool)) == 1, i=1:n) %>%
     # old
-  add_constraint(s[i] - SK_pool[k] <= M * (1-z_ik[i,k]), i=1:n,k=1:length(SK_pool)) %>% 
-  add_constraint(s[i] - SK_pool[k] >= -M * (1-z_ik[i,k]), i=1:n,k=1:length(SK_pool)) %>%
+  #add_constraint( s[i] - SK_pool[k] <= M * (1-z_ik[i,k]) , i=1:n,k=1:length(SK_pool)) %>% 
+  #add_constraint( s[i] - SK_pool[k] >= -M * (1-z_ik[i,k]), i=1:n,k=1:length(SK_pool)) %>%
     # new
-  #add_constraint((1-z_ik[i,k]) / (s[i] - SK_pool[k]) <= 1/M , i=1:n,k=1:length(SK_pool)) %>% 
-  #add_constraint((1-z_ik[i,k]) / (s[i] - SK_pool[k]) >= -1/M, i=1:n,k=1:length(SK_pool)) %>%
+  add_constraint( (s[i] - SK_pool[k]) - (M * (1-z_ik[i,k])) <= 0 , i=1:n,k=1:length(SK_pool)) %>% 
+  add_constraint((s[i] - SK_pool[k]) - (-M * (1-z_ik[i,k])) >= 0, i=1:n,k=1:length(SK_pool)) %>%
   # Indicator of score k assigned to prob pi_l
-  add_variable(z_kl[k,l], k=1:length(SK_pool), l=1:length(PI), type = 'binary') %>% 
-  # each k is assigened to exactly 1 probs 
+  add_variable(z_kl[k,l], k=1:length(SK_pool), l=1:length(PI), type = 'binary') 
+
+  # higher K is associated with higher probabilities
+  # Add constraints in nested loops
+  #for (k in 2:length(SK_pool)) { # Start from 2 since we are using k-1
+  #  for (l in 1:(length(PI)-1)) {
+  #  for (lh in (l+1):length(PI)) {
+  #      MILP_V2 <- MILP_V2 %>%
+  #        add_constraint(z_kl[k, l] <= 1 - z_kl[k-1, lh])
+  #    }
+  #  }
+  #} 
+
+  MILP_V2 <- MILP_V2 %>% 
+  # each k is assigned to exactly 1 probs 
   add_constraint(sum_over(z_kl[k,l], l=1:length(PI)) == 1,k=1:length(SK_pool)) %>% 
+  
   # Indicator of point i assigned with prob pi_l
   add_variable(p_il[i,l], i=1:n, l=1:length(PI),type = 'binary') %>% 
     # old 
-  add_constraint(p_il[i,l] >= z_kl[k,l] + z_ik[i,k] - 1, i=1:n, k=1:length(SK_pool), l=1:length(PI)) %>% 
+  #add_constraint(p_il[i,l] >= z_kl[k,l] + z_ik[i,k] - 1, i=1:n, k=1:length(SK_pool), l=1:length(PI)) %>% 
     # new
-  #add_constraint(p_il[i,l] - z_kl[k,l] - z_ik[i,k] >= -1, i=1:n, k=1:length(SK_pool), l=1:length(PI)) %>% 
+  add_constraint(p_il[i,l] - z_kl[k,l] - z_ik[i,k] >= -1, i=1:n, k=1:length(SK_pool), l=1:length(PI)) %>% 
   # Each i have exactly one probs
   add_constraint(sum_over(p_il[i,l], l=1:length(PI)) == 1, i=1:n) %>% 
   #Penalty Expression
@@ -86,11 +100,11 @@ MILP_V2 <- MIPModel() %>%
   #add_constraint(beta[j] <= -M*lambda[j], j=1:p) %>% 
   # Objective Function
   set_objective(  - (sum_over(y[i] * log(PI[l]) * p_il[i,l] + (1-y[i]) * log(1-PI[l]) * p_il[i,l],i=1:n,l=1:length(PI)))
-                 ,sense = "min") %>% 
+                  ,sense = "min") %>% 
   solve_model(with_ROI(solver = "glpk"))
 
 # Lambda in obj
-# 
+# + Lambda0 * sum_expr(lambda[j],j=1:p
 
 t2 = Sys.time()
 
@@ -100,13 +114,9 @@ time.diff <- t2 - t1
 beta <- MILP_V2 %>% get_solution(beta[j])
 s <- MILP_V2 %>% get_solution(s[i])
 
+s_check <- unlist(lapply(1:10, function(i) t(as.matrix(beta[,3])) %*% as.matrix(X[i,])))
 
-t(as.matrix(beta[,3])) %*% as.matrix(X[1,])
-t(as.matrix(beta[,3])) %*% as.matrix(X[2,])
-t(as.matrix(beta[,3])) %*% as.matrix(X[3,])
-#t(as.matrix(beta[,3])) %*% as.matrix(X[7,])
-
-
+SK_pool[11]
 
 #
 zik <- MILP_V2 %>% get_solution(z_ik[i,k])
@@ -121,11 +131,13 @@ pil <- MILP_V2 %>% get_solution(p_il[i,l])
 pil %>% group_by(i) %>% summarise(sum_p = sum(value))
 pil %>% filter(value==1)
 
-# Lambda
-#lambda_list <- MILP_V2 %>% get_solution(lambda[j]) 
 
-# Only works when there's a column with all being 1. then that j is -50 others are 0
+
+# Lambda
+# lambda_list <- MILP_V2 %>% get_solution(lambda[j]) 
+
 MILP_V2$objective_value
+
 
 
 
