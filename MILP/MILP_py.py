@@ -21,13 +21,6 @@ PI = np.linspace(0, 1, 100)[1:-1]  # Exclude 0 and 1
 
 
 def MILP_V2(X,y):
-    """mtz: Miller-Tucker-Zemlin's model for the (asymmetric) traveling salesman problem
-    (potential formulation)
-    Parameters:
-        - n: number of nodes
-        - c[i,j]: cost for traversing arc (i,j)
-    Returns a model, ready to be solved.
-    """
 
     model = Model("MILP_V2")
 
@@ -86,7 +79,7 @@ def MILP_V2(X,y):
 
 
 # Solve model
-model = mtz(n,c)
+model = MILP_V2(X,y)
 model.hideOutput() # silent mode
 model.optimize()
 cost = model.getObjVal()
