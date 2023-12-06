@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from statistics import median
 import os
-import riskslim
+#import riskslim
 from fasterrisk.fasterrisk import RiskScoreOptimizer
 
 def FR_coef(data):

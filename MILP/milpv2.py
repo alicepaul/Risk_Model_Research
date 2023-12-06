@@ -1,25 +1,15 @@
 from pyscipopt import Model, quicksum
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import classification_report
+from statistics import median
+from sklearn.linear_model import LogisticRegression
 
-# Load the data
-file_path = "/Users/oscar/Documents/GitHub/Risk_Model_Research/MILP/data/"
-file_name = "simulate0_10_0_4_data.csv"  # Replace with your file name
-df = pd.read_csv(file_path + file_name) 
-
-# Preprocessing the data
-df = df.iloc[0:20, 1:5]
-y = df.iloc[:, 0].values
-X = df.iloc[:, 1:].values
-
-# Parameters
-n, p = X.shape
-M = 1000
-Lambda0 = 0
-SK_pool = list(range(-5 * p, 5 * p + 1))
-PI = np.linspace(0, 1, 100)[1:-1]  # Exclude 0 and 1
-
-def MILP_V2(X, y):
+def MILP_V2(X,y,n,p,M,SK_pool,PI):
     model = Model("MILP_V2")
 
     # Variables
@@ -45,33 +35,40 @@ def MILP_V2(X, y):
     for k in SK_pool:
         model.addCons(quicksum(z_kl[k, l] for l in range(len(PI))) == 1)
 
+    # constraints for ensuring higher k is associated with higher probability PI[l]
+    #for k in SK_pool[1:]:  # Starting from the second element in SK_pool
+    #    for l in range(len(PI) - 1):  # l < l', so we don't include the last element
+    #        for l_prime in range(l + 1, len(PI)):
+    #            model.addCons(z_kl[k, l] <= 1 - z_kl[k - 1, l_prime])
+
+
     # Objective Function
     objective = -quicksum(y[i] * np.log(PI[l]) * p_il[i, l] + (1 - y[i]) * np.log(1 - PI[l]) * p_il[i, l] for i in range(n) for l in range(len(PI)))
     model.setObjective(objective, "minimize")
 
+
+    # Run Logistic Regression
+    log_reg = LogisticRegression()
+    log_reg.fit(X, y)
+    
+    # Extract and round coefficients
+    beta_start = np.round(log_reg.coef_[0]).astype(int)
+
+    # Create a partial solution
+    partial_solution = model.createPartialSol()
+
+    # Set initial values for beta using beta_start
+    for j, val in enumerate(beta_start):
+        model.setSolVal(partial_solution, beta[j], val)
+
+    # Calculate s values using X and beta_start
+    for i in range(n):
+        s_val = sum(beta_start[j] * X[i, j] for j in range(p))
+        model.setSolVal(partial_solution, s[i], s_val)
+    
+    # Add the partial solution to the model
+    model.addSol(partial_solution)
+
     model.data = beta, s, z_ik, z_kl, p_il
     return model
 
-# Create and solve the model
-milp_model = MILP_V2(X, y)
-milp_model.optimize()
-
-milp_model.getStatus()
-
-# Extract model data
-beta, s, z_ik, z_kl, p_il = milp_model.data
-
-# Extracting beta values
-beta_values = {j: milp_model.getVal(beta[j]) for j in range(p)}
-
-# Extracting s values
-s_values = {i: milp_model.getVal(s[i]) for i in range(n)}
-
-# Print the results
-print("Beta values:")
-for j in range(p):
-    print(f"beta[{j}]: {beta_values[j]}")
-
-print("\ns values:")
-for i in range(n):
-    print(f"s[{i}]: {s_values[i]}")

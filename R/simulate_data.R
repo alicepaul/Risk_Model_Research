@@ -35,26 +35,31 @@ gen_data <- function(n, p1, p2, eps, filename){
   df$y <- data$y
   df <- df %>%
     select(y, everything())
-  write.csv(df, paste0("/Users/alice/Dropbox/risk_models/sim_data/",filename,"_data.csv"), row.names=FALSE)
+  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/",filename,"_data.csv"), row.names=FALSE)
   
   # coefficients file
   coef_df <- data.frame(names = c("Intercept",names(df)[1:(p1+p2)]),
                         vals = c(data$intercept, data$coef))
-  write.csv(coef_df, paste0("/Users/alice/Dropbox/risk_models/sim_data/",filename,"_coef.csv"), row.names=FALSE)
+  write.csv(coef_df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/",filename,"_coef.csv"), row.names=FALSE)
   
 }
 
 # Example of generating data and saving
 set.seed(5)
-p1 = c(0, 5, 10, 50, 10)
-p2 = c(10, 5, 10, 50, 0)
-for (j in 1:length(p1)){
-  for (eps in c(0, 0.3, 0.5, 1.0)){
-    for (i in 1:10){
-      gen_data(1000, p1[j], p2[j], eps, 
-               paste0("simulate",p1[j],"_",p2[j],"_",as.integer(10*eps),"_",i))
-    }
-  }
-}
+n = c(20,50,100)
+p1 = c(5,6,7,8,9)
+p2 = c(1,2,3,4,5)
 
+for (j in 1:length(n)){
+  for (k in 1:length(p1)) {
+    for (l in 1:length(p2)) {
+      for (eps in c(0, 0.3, 0.5, 1.0)){
+        for (i in 1:10){
+          gen_data(n[j], p1[k], p2[k], eps, 
+               paste0("sim",'_',n[j],'_',p1[k],"_",p2[l],"_",as.integer(10*eps),"_",i))
+}
+}
+}
+}
+}
 

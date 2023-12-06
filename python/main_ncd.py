@@ -193,7 +193,7 @@ def run_experiments(my_path):
     files = [f for f in os.listdir(my_path) if os.path.isfile(os.path.join(my_path,f))]
 
     #res = pd.DataFrame(columns = column_names)
-    res_file = os.path.join(my_path,"results_ncd_fr_HE.csv")
+    res_file = os.path.join(my_path,"results_ncd_fr_YY.csv")
     res_f = open(res_file, "w")
     res_f.write(column_names)
     res_f.close()
@@ -287,4 +287,5 @@ if __name__ == "__main__":
     run_experiments(sys.argv[1])
 
 
-# e-6 to e-=1
+
+run_experiments('/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/')
