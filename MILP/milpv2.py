@@ -48,6 +48,7 @@ def MILP_V2(X,y,n,p,M,SK_pool,PI):
 
 
     # Run Logistic Regression
+    ## add cord
     log_reg = LogisticRegression()
     log_reg.fit(X, y)
     

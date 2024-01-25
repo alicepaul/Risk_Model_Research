@@ -15,9 +15,10 @@ file_name = "simulate0_10_0_4_data.csv"  # Replace with your file name
 df = pd.read_csv(file_path + file_name) 
 
 # Preprocessing the data
-df = df.iloc[0:20, 0:4]
+df = df.iloc[0:20, 0:3]
 y = df.iloc[:, 0].values
 X = df.iloc[:, 1:].values
+
 
 # Parameters
 n, p = X.shape
@@ -41,6 +42,7 @@ solving_time = milp_model.getSolvingTime()
 
 # Extracting beta values
 beta_values = {j: milp_model.getVal(beta[j]) for j in range(p)}
+#s_23 = [row[0] * beta_values[0] + row[1] * beta_values[1] for row in X]
 
 np.dot(X, beta_values)
 # Extracting s values
@@ -55,6 +57,16 @@ for k in SK_pool:
 
 # Extracting keys where z_kl values are equal (or almost equal) to 1
 keys_zkl = {key: val for key, val in zkl_values.items() if val==1}
+new_dict = {key[0]: key[1] for key in keys_zkl.keys()}
+
+prob = []
+for val in s_23:
+    if val in new_dict:
+        score_value = new_dict[val]
+        prob.append(PI[score_value])
+    else:
+        prob.append(None)
+
 
 for key in keys_zkl.keys():
     print(f"z_kl{key}: {keys_zkl[key]}")

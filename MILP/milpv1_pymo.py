@@ -43,7 +43,7 @@ model.objective = Objective(rule=objective_rule, sense=minimize)
 
 
 # Choose a suitable solver available in your environment
-solver = SolverFactory('cbc')
+solver = SolverFactory('ipopt')
 results = solver.solve(model, tee=True)
 
 

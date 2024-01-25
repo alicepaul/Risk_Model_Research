@@ -1,5 +1,4 @@
 import milpv2 as milp
-
 import os
 import pandas as pd
 from pyscipopt import Model, quicksum
@@ -13,11 +12,21 @@ from statistics import median
 from sklearn.linear_model import LogisticRegression
 
 
-def get_metrics(y, probs):
+column_names = "data, n, p, method, acc, sens, spec, non-zeros, time \n"
 
-    # Ensure probs is a list of probabilities
-    if isinstance(probs, dict):
-        probs = [probs[i] for i in range(len(probs))]
+def get_metrics(X_test,y_test,beta_values,score_board,PI):
+
+    # Convert test X into S 
+    s_val = [row[0] * beta_values[0] + row[1] * beta_values[1] for row in X_test]
+
+    # convert s into probs
+    probs = []
+    for val in s_val:
+        if val in score_board:
+            score_value = score_board[val]
+            probs.append(PI[score_value])
+        else:
+            probs.append(None)
 
     # Ensure probs is a 1D array
     probs = np.array(probs).ravel()
@@ -26,10 +35,10 @@ def get_metrics(y, probs):
     predicted_class = [1 if prob > 0.5 else 0 for prob in probs]
 
     # AUC
-    auc = roc_auc_score(y, probs)
+    auc = roc_auc_score(y_test, probs)
 
     # Confusion matrix measures
-    tn, fp, fn, tp = confusion_matrix(y, predicted_class, labels=[0, 1]).ravel()
+    tn, fp, fn, tp = confusion_matrix(y_test, predicted_class, labels=[0, 1]).ravel()
 
     accuracy = (tp + tn) / (tp + tn + fp + fn)
     sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
@@ -37,25 +46,41 @@ def get_metrics(y, probs):
 
     return auc, accuracy, sensitivity, specificity
 
+def record_measures(X_test,y_test,beta_values,score_board,filename,n,p,method,time,PI):
+    # Adds record
+    measures = get_metrics(X_test,y_test,beta_values,score_board,PI)
+
+    res_str = filename + "," + str(n) + "," + str(p) + "," + method + "," + str(measures[0]) + "," + str(measures[1]) + "," \
+    + str(measures[2]) + "," + str(np.count_nonzero(beta_values))+ ","+str(time) +"\n"
+    return(res_str)
+
 def process_files_and_predict(working_directory):
-    results = {}
+
+    res_file = os.path.join(working_directory,"results_100_4.csv")
+    res_f = open(res_file, "w")
+    res_f.write(column_names)
+    res_f.close()
 
     for filename in os.listdir(working_directory):
         if filename.endswith('_data.csv'):
+            res = ''
             # Load and preprocess data
             df = pd.read_csv(os.path.join(working_directory, filename))
-            #df = df.iloc[:, 1:5]  # Adjust slicing based on data structure
+            df = df.iloc[0:100, 0:5]  # Adjust slicing based on data structure
             y = df.iloc[:, 0].values
             X = df.iloc[:, 1:].values
 
+            # Train test split
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 42)
+
             # Define parameters (adjust these as needed)
-            n, p = X.shape
+            n, p = X_train.shape
             M = 1000
             SK_pool = list(range(-5 * p, 5 * p + 1))
             PI = np.linspace(0, 1, 100)[1:-1]
 
             # Apply MILP_V2 model (implementation should be provided)
-            milp_model = milp.MILP_V2(X,y,n,p,M,SK_pool,PI)
+            milp_model = milp.MILP_V2(X_train,y_train,n,p,M,SK_pool,PI)
             milp_model.optimize()
             milp_model.getStatus()
             
@@ -68,50 +93,26 @@ def process_files_and_predict(working_directory):
             # Extracting beta values
             beta_values = {j: milp_model.getVal(beta[j]) for j in range(p)}
 
-
             # Extracting s values
             s_values = {i: milp_model.getVal(s[i]) for i in range(n)}
 
             # Extracting zkl values
             zkl_values = {(k, l): milp_model.getVal(z_kl[k, l]) for k in SK_pool for l in range(len(PI))}
 
-            for k in SK_pool:
-                for l in range(len(PI)):
-                    print(f"z_kl[{k},{l}]: {zkl_values[k, l]}")
-
             # Extracting keys where z_kl values are equal (or almost equal) to 1
             keys_zkl = {key: val for key, val in zkl_values.items() if val==1}
 
-            for key in keys_zkl.keys():
-                print(f"z_kl{key}: {keys_zkl[key]}")
-
-            # Extracting p_il values
-            pil_values = {(i, l): milp_model.getVal(p_il[i, l]) for i in range(n) for l in range(len(PI))}
-
-            # Extracting keys (i, l) where p_il values are equal (or almost equal) to 1
-            keys_pil = [key for key, val in pil_values.items() if val==1]
-
-            # print the filtered keys
-            for key in keys_pil:
-                print(f"p_il{key}: 1")
-            
-            # Identify p_il values equal to 1
-            # This gives the mapping of each i to a specific l
-            i_to_l_mapping = {i: l for (i, l), val in pil_values.items() if val==1}
-
-            # Map each i to PI[l]
-            predicted_probabilities = {i: PI[l] for i, l in i_to_l_mapping.items()}
+            # Form score to prob board 
+            score_board  = {key[0]: key[1] for key in keys_zkl.keys()}
 
             # Store results
-            results[filename] = get_metrics(y,predicted_probabilities)
+            res += record_measures(X_test,y_test,beta_values,score_board,filename,n,p,'v2',solving_time,PI)
 
-    return results
+            res_f = open(res_file, "a")
+            res_f.write(res)
+            res_f.close()
 
 # Usage example
 working_directory = '/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_new'  # Replace with your actual directory path
-all_predictions = process_files_and_predict(working_directory)
+process_files_and_predict(working_directory)
 
-
-
-
-            
