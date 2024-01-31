@@ -53,21 +53,21 @@ simulate_data <- function(n, p1, p2, eps=0, link=1){
   return(list(x=x,y=y,coef=coef,intercept=intercept))
 }
 
-gen_data <- function(n, p1, p2, eps, filename){
+gen_data <- function(n, p1, p2, eps, link,filename){
   # Generates data and saves two files - one with data, one with coefficient vals
-  data <- simulate_data(n, p1, p2, eps)
+  data <- simulate_data(n, p1, p2, eps, link)
   
   # data file
   df <- as.data.frame(data$x)
   df$y <- data$y
   df <- df %>%
     select(y, everything())
-  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/",filename,"_data.csv"), row.names=FALSE)
+  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/",filename,"_data.csv"), row.names=FALSE)
   
   # coefficients file
   coef_df <- data.frame(names = c("Intercept",names(df)[1:(p1+p2)]),
                         vals = c(data$intercept, data$coef))
-  write.csv(coef_df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/",filename,"_coef.csv"), row.names=FALSE)
+  write.csv(coef_df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/",filename,"_coef.csv"), row.names=FALSE)
   
 }
 
@@ -77,13 +77,16 @@ n = c(20,50,100)
 p1 = c(5,6,7,8,9)
 p2 = c(1,2,3,4,5)
 
+
 for (j in 1:length(n)){
   for (k in 1:length(p1)) {
     for (l in 1:length(p2)) {
       for (eps in c(0, 0.3, 0.5, 1.0)){
-        for (i in 1:10){
-          gen_data(n[j], p1[k], p2[k], eps, 
-                   paste0("sim",'_',n[j],'_',p1[k],"_",p2[l],"_",as.integer(10*eps),"_",i))
+        for (link in c(1,2,3)) {
+          for (i in 1:10){
+            gen_data(n[j], p1[k], p2[k], eps, link,
+                     paste0("sim",'_',n[j],'_',p1[k],"_",p2[l],"_",as.integer(10*eps),"_",link,'_',i))
+          }
         }
       }
     }
