@@ -62,18 +62,18 @@ gen_data <- function(n, p1, p2, eps, link,filename){
   df$y <- data$y
   df <- df %>%
     select(y, everything())
-  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/",filename,"_data.csv"), row.names=FALSE)
+  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/",filename,"_data.csv"), row.names=FALSE)
   
   # coefficients file
   coef_df <- data.frame(names = c("Intercept",names(df)[1:(p1+p2)]),
                         vals = c(data$intercept, data$coef))
-  write.csv(coef_df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/",filename,"_coef.csv"), row.names=FALSE)
+  write.csv(coef_df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/",filename,"_coef.csv"), row.names=FALSE)
   
 }
 
 # Example of generating data and saving
 set.seed(5)
-n = c(20,50,100)
+n = c(500,1000)
 p1 = c(5,6,7,8,9)
 p2 = c(1,2,3,4,5)
 

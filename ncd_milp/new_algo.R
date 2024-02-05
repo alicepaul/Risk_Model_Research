@@ -2,7 +2,10 @@
 ## 2024.1.29: write out the body of algorithm with an example tested out and have it written as a generic function
 ## next step: write experiments to test on different datasets
 
+#df <- sim_500_5_1_0_1_1_data
+#X <- as.matrix(df[,-1])
 
+#y <- as.matrix(df[,1],ncol=1)
 
 
 #' Risk Model Estimation with new algo
@@ -16,80 +19,101 @@
 #' @return optimal beta (numeric vector) and corresponding
 #' score board with its risk
 
-risk_mod_new_alg <- function(X, y, a = -10, b = 10){
+
+# add iteration; scores not in unique should be 
+# train 
+# record errors and seed for which it is producing 
+# like initial errors 
+
+
+risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol= 1e-5,weights=NULL){
   
-  #browser()
-  # initial starting vector for betas 
-  beta_list <- rep(a,times=ncol(X))
   
-  v_list_total <- list()
+  # Weights
+  if (is.null(weights))
+    weights <- rep(1, nrow(X))
   
-  # train test split 
-  test_index <- sample(c(TRUE, FALSE), size = nrow(X), replace = TRUE, prob = c(0.25, 0.75))
+  # Initial beta is null then round LR coefficients using median 
+  if (is.null(beta)){
+    # Initial model 
+    df <- data.frame(X, y)
+    init_mod <- glm(y~.-1, family = "binomial", weights = weights, data = df)
+    
+    # Replace NA's with 0's
+    coef_vals <- unname(coef(init_mod))
+    coef_vals[is.na(coef_vals)] <- 0
+    
+    # Round so betas within range
+    gamma <- min(abs(a), abs(b))/max(abs(coef_vals))
+    beta <- coef_vals*gamma
+    # initial starting vector for betas 
+    beta <- round(beta)
+  }
   
+  
+
+
   # result list of optimal beta
-  optimal_beta <- matrix(c( seq(1,ncol(X)),
-                           rep(0,times=ncol(X))),ncol = 2)
+  #optimal_beta <- matrix(c( seq(1,ncol(X)),
+  #                         rep(0,times=ncol(X))),ncol = 2)
   
   # iteration
-  for (p in 1:ncol(X[!test_index,])) {
+  iters <- 1
+  while (iters < max_iters){
     
+    for (j in 1:ncol(X)) {
+    
+    old_beta <- beta
+      
     beta_result <- matrix(c(seq(a,b),
                             rep(0,times=length(seq(a,b)))),
                           ncol = 2)
     
-    for (beta in seq(a,b)) {
+    for (b_t in seq(a,b)) {
+      
       #browser()
       # update value of the current beta evaluting 
-      beta_list[p] <- beta
+      beta[j] <- b_t
       # calculate score for all trainning under the current beta
-      s <- as.matrix(X[!test_index,]) %*% as.matrix(beta_list)
+      s <- as.matrix(X) %*% as.matrix(beta)
       # extract all unique scores and construct score board 
       uni_s <- unique(s)
       v_list <- matrix(c(uni_s,rep(0,times=length(uni_s))),ncol = 2)
       # calculate corresponding probabilities with the score board 
       for (v in 1:length(uni_s)) {
-        v_list[v,2] <- mean(y[!test_index][which(s==uni_s[v])]==1)
+        v_list[v,2] <- mean(y[which(s==uni_s[v])]==1)
       }
       
       # evaluate score board and test error
-      s_test <- as.matrix(X[test_index,]) %*% as.matrix(beta_list)
-      uni_s_test <- unique(s_test)
-      
-      # check for rare cases ###### Currently set as 0 
-      if (!identical(uni_s,uni_s_test)){
-        diff <- c()
-        for (vals in uni_s_test) {
-          if (!(vals %in% uni_s)) {
-            diff <- c(diff,vals)
-          }
-        }
-        # update v_list
-        v_list <- rbind(v_list,
-                        cbind(diff,rep(0,times=length(diff))))
-      }
       
       # convert score to be probs
-      y_pred_test <- sapply(s_test, function(s_test) return(v_list[,2][v_list[,1]==s_test]))
+      y_pred_test <- sapply(s, function(s) return(v_list[,2][v_list[,1]==s]))
       y_pred_test <- unlist(y_pred_test)
       # convert probs to be class
+      set.seed(1000)
       y_pred_test <- rbinom(length(y_pred_test),1,y_pred_test)
-      y_test <- as.numeric(as.matrix(y[test_index]))
+      y_test <- as.numeric(as.matrix(y))
       
       # get confusion matrix
       mat <- get_metrics(y=y_test,y_pred = y_pred_test)
-      # update error for the current evalutation of beta[p]
-      beta_result[,2][beta_result[,1]==beta] <- mat$acc
+      # update error for the current evaluation of beta[p]
+      beta_result[,2][beta_result[,1]==b_t] <- mat$acc
     }
     
     # find the optimal beta value for beta[p] and update result list
-    optimal_beta[,2][optimal_beta[,1]==p] <- beta_result[,1][which.max(beta_result[,2])]
-    beta_list[p] <- beta_result[,1][which.max(beta_result[,2])]
+    beta[j] <- beta_result[,1][which.max(beta_result[,2])]
+    }
     
+    # Check if change in beta is within tolerance to converge
+    if (max(abs(old_beta - beta)) < tol){
+      break
+    }
+    iters <- iters+1
   }
   
+  
   # construct score board using all data
-  s_all <- as.matrix(X) %*% as.matrix(optimal_beta[,2],nrow=1)
+  s_all <- as.matrix(X) %*% as.matrix(beta)
   # extract all unique scores and construct score board 
   score <- unique(s_all)
   score_board <- matrix(c(score,rep(0,times=length(score))),ncol = 2)
@@ -98,14 +122,14 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10){
     score_board[v,2] <- mean(y[which(s_all==score[v])]==1)
   }
   
-  
-  return(list(beta <- optimal_beta,
+  score_board <- score_board[order(score_board[,1]),]
+  return(list(beta <- beta,
               score_board <- score_board[order(score_board[,1]),] ))
 }
 
 #debug(risk_mod_new_alg)
 #undebug(risk_mod_new_alg)
-#w <- risk_mod_new_alg(X,y,a=-10,b=10)
+# <- risk_mod_new_alg(X,y,a=-10,b=10)
 
 # Get matrix function
 get_metrics <- function(y,y_pred){

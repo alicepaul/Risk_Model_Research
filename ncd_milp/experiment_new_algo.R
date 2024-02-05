@@ -26,18 +26,15 @@ run_experiments <- function(my_path){
     # Read in data
     df <- read.csv(paste0(my_path,f))
     X <- as.matrix(df[,-1])
-    #y <- df[,1]
     y <- as.matrix(df[,1],ncol=1)
-    #y <- df[,1]
-    #X <- as.matrix(df[,2:ncol(df)])
-    #X <- cbind(rep(1,nrow(X)), X) # adds intercept column
     
-    #test_index <- sample(c(TRUE, FALSE), size = nrow(X), replace = TRUE, prob = c(0.2, 0.8))
-    #X_train <- X[!test_index,]
-    #y_train <- y[!test_index,]
+    set.seed(1000)
+    test_index <- sample(c(TRUE, FALSE), size = nrow(X), replace = TRUE, prob = c(0.2, 0.8))
+    X_train <- X[!test_index,]
+    y_train <- y[!test_index,]
     
-    #X_test <- X[test_index,]
-    #y_test <- y[test_index,]
+    X_test <- X[test_index,]
+    y_test <- y[test_index,]
     
     # Add weights file if needed
     #weights <- rep(1, nrow(X))
@@ -49,18 +46,20 @@ run_experiments <- function(my_path){
     
     # Run algorithm to get risk model
     t1 <- Sys.time()
-    mod <- risk_mod_new_alg(X, y,a = -2, b = 2) # change for beta bounds
+    mod <- risk_mod_new_alg(X_train, y_train,a = -5, b = 5) # change for beta bounds
     t2 <- Sys.time()
     
     
     # Get evaluation metrics
     time_secs <- t2 - t1
-    s_X <- X %*% mod[[1]][,2]
-    y_pred_probs <- sapply(s_X, function(s_X) return(mod[[2]][,2][mod[[2]][,1]==s_X]))
+    s_test <- X_test %*% mod[[1]]
+    y_pred_probs <- sapply(s_test, function(s_test) return(mod[[2]][,2][mod[[2]][,1]==s_test]))
+    y_pred_probs <- unlist(y_pred_probs)
     
     # convert probs to be class
+    set.seed(1000)
     y_pred_class <- rbinom(length(y_pred_probs),1,y_pred_probs) 
-    res_metrics <- get_metrics(y,y_pred_class)
+    res_metrics <- get_metrics(y_test,y_pred_class)
     
     
     # Add row to data frame
@@ -70,13 +69,22 @@ run_experiments <- function(my_path){
     results <- rbind(results, file_row)
     
   }
-  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/", "testing_2024.1.31.csv"), row.names=FALSE)
+  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/", "testing_2024.2.3.csv"), row.names=FALSE)
 }
 
-run_experiments("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim/")
+run_experiments("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/")
 
 
 debug(run_experiments)
 undebug(run_experiments)
+
 debug(risk_mod_new_alg)
 undebug(risk_mod_new_alg)
+
+df <- sim_1000_5_1_0_1_8_data
+X <- as.matrix(df[,-1])
+
+y <- as.matrix(df[,1],ncol=1)
+
+w <- risk_mod_new_alg(X,y,a=-2,b=2)
+
