@@ -2,11 +2,14 @@
 ## 2024.1.29: write out the body of algorithm with an example tested out and have it written as a generic function
 ## next step: write experiments to test on different datasets
 
-#df <- sim_500_5_1_0_1_1_data
+#df <- sim_500_5_2_10_1_10_data
 #X <- as.matrix(df[,-1])
+
 
 #y <- as.matrix(df[,1],ncol=1)
 
+#debug(risk_mod_new_alg)
+#w <- risk_mod_new_alg(X,y,a=-2,b=2)
 
 #' Risk Model Estimation with new algo
 #' 
@@ -30,8 +33,10 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
   
   
   # Weights
-  if (is.null(weights))
+  if (is.null(weights)){
     weights <- rep(1, nrow(X))
+  }
+
   
   # Initial beta is null then round LR coefficients using median 
   if (is.null(beta)){
@@ -50,13 +55,7 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
     beta <- round(beta)
   }
   
-  
 
-
-  # result list of optimal beta
-  #optimal_beta <- matrix(c( seq(1,ncol(X)),
-  #                         rep(0,times=ncol(X))),ncol = 2)
-  
   # iteration
   iters <- 1
   while (iters < max_iters){
@@ -90,7 +89,7 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
       y_pred_test <- sapply(s, function(s) return(v_list[,2][v_list[,1]==s]))
       y_pred_test <- unlist(y_pred_test)
       # convert probs to be class
-      set.seed(1000)
+      #set.seed(1000)
       y_pred_test <- rbinom(length(y_pred_test),1,y_pred_test)
       y_test <- as.numeric(as.matrix(y))
       
@@ -124,7 +123,8 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
   
   score_board <- score_board[order(score_board[,1]),]
   return(list(beta <- beta,
-              score_board <- score_board[order(score_board[,1]),] ))
+              score_board <- score_board[order(score_board[,1]),],
+              iters <- iters))
 }
 
 #debug(risk_mod_new_alg)
