@@ -8,6 +8,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+#devtools::install_github("hjeglinton/riskscores", build_vignettes = TRUE)
 
 library(knitr)
 library(xtable)
@@ -19,7 +20,7 @@ library(caret)
 library(gridExtra)
 #library(kableExtra)
 library(gtsummary)
-#library(riskscores)
+library(riskscores)
 source('risk.R')
 
 ```
@@ -34,43 +35,30 @@ raw_data <- read.csv("../data/Peru_TB_data.csv")
 ```
 
 
-In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence (`PCTadherence`), which is a continuous variable that measures the percentage of doses taken on time. To make this outcome binary, we'll need to define a cutoff above which we'll consider the patient "adherent". Table 1 explores the class imbalance when using a cutoff of 90% (where a patient must have 90% adherence to be considered "adherent"). We observe class imbalance, with only 8.4% of participants classified as "non-adherent" (n = 21) and 91.6% of participants classified as "adherent" (n = 228). 
 
-
-```{r, eval = FALSE}
-
-data.frame(non_adherent = c(sum(raw_data$PCTadherence < 90, na.rm = TRUE),
-                           sum(raw_data$PCTadherence_sensi < 90, na.rm  = TRUE)),
-           adherent = c(sum(raw_data$PCTadherence > 90, na.rm = TRUE),
-                           sum(raw_data$PCTadherence_sensi > 90, na.rm  = TRUE)),
-           missing = c(sum(is.na(raw_data$PCTadherence)),
-                       sum(is.na(raw_data$PCTadherence_sensi))),
-           row.names = c("PCTadherence", "PCTadherence_sensi"))  %>%
-  
-  kable(format = "latex", caption = "Patient Count by Dichotomized Outcome", 
-                  col.names = c("<90% Adherence", ">90% Adherence", "Missing"),
-                  booktabs = TRUE) # %>% 
-  
- # kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 10)
-
-```
-
-The raw data contained 266 observations for each regimen in the study. The study included 249 individual participants and some had multiple regimens. For this analysis we considered only the first regimen for each participant. After removing the subsequent regimens, the data contained one row for each participant (n = 249). 
+This study included 249 individual participants. Since some participants had multiple regimens, the raw data contained 266 regimens in total. For this analysis we considered only the first regimen for each participant. After removing the subsequent regimens, the data contained one row for each participant (n = 249).
 
 The raw data included 64 potential covariates. We dropped `PTID2`, `hunger_freq`, `health_ctr`, and `post_tb_pt_work` because they were either not listed in the data dictionary or were listed with a note that they should not be included in the model. We summarized the family support, evaluation of health services, motivation, and TB disinformation variables by taking the median value for each category. 
 
-The data dictionary noted that `pills` variable was coded as 1 for 0-3 pills, 2 for 4-6 pills, 3 for 7-9 pills, 4 for 10-11 pills, and 5 for 12+ pills. However, the values in the data were 0.25, 0.50, 0.75, and 1.00. We converted this variable to the scale in the data dictionary by multiplying each value by 4. However, note that this results in no values of 5 in the cleaned data (indicating no subjects taking 12+ pills). The `adr_freq` variable also needed to be multiplied by 4 for the same reason. In this variable's case, all values listed in the data dictionary (0, 1, 2, 3, and 4) are present in the transformed data. 
+The data dictionary noted that `pills` variable was coded as 1 for 0-3 pills, 2 for 4-6 pills, 3 for 7-9 pills, 4 for 10-11 pills, and 5 for 12+ pills. However, the values in the data were 0.25, 0.50, 0.75, and 1.00. We converted this variable to the scale in the data dictionary by multiplying each value by 4. Note that this results in no values of 5 in the cleaned data (indicating no subjects taking 12+ pills). The `adr_freq` variable also needed to be multiplied by 4 for the same reason. In this variable's case, all values listed in the data dictionary (0, 1, 2, 3, and 4) are present in the transformed data. 
 
-Distributions of the continuous covariates are visualized in the appendix. The variables `self_eff`, `stig_tot`, and `phq9_tot` were dropped There were four continuous variables that were converted to categorical using the following cutoffs (selected based on class balance): 
+Distributions of the continuous covariates are visualized in the appendix. There were seven continuous variables that were converted to categorical using the following cutoffs (selected based on class balance or background knowledge): 
 
 * `age_BLchart`: <16 years, 16-17 years, 18+ years
 * `audit_cat`: 0, >0 
 * `ace_cat`: 0, 1, >1 
 * `tx_mos_cat`: $\le6$ months, >6 months
+* `self_eff_cat`: score of $\le12$, >12
+* `stig_tot_cat`: score of $\le30$, >30
+* `phq9_tot_cat`: score of $\le10$, >10
 
-The categorical variables `ram` and `regular_drug` were dropped because they each had only 5 patients responding with "yes". The variables `edu_level_mom` and `edu_level_dad` could potentially be combined, but they contained many "I don't know" responses so  were dropped. The `monitor1` variable was also dropped because it was not clear how to relevel it. 
 
-After processing, the dataset contained 30 covariates (listed in the Appendix).  
+The categorical variables `ram` and `regular_drug` were dropped because they each had only 5 patients responding with "yes". The variables `edu_level_mom` and `edu_level_dad` could potentially be combined, but they contained many "I don't know" responses so were also dropped. 
+
+After processing, the dataset contained 32 covariates (listed in the Appendix). We excluded 37 patients with missing covariate data, leaving us with 212 observations. 
+
+In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence (`PCTadherence`), which is a continuous variable that measures the percentage of doses taken on time. To make this outcome binary, we define a cutoff of 90% above which we'll consider the patient "adherent". We observe a high level of class imbalance using this cutoff, with only 8.0% of participants classified as "non-adherent" (n = 17) and 92.0% of participants classified as "adherent" (n = 195). 
+
 
 
 ```{r}
@@ -84,7 +72,8 @@ tb_mat <- tb_as_matrix(tb_df)
 
 # Model Fitting 
 
-Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we run cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance. The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the $\lambda_0$ producing the lowest mean deviance results in a model with 4 features. Note that due to the relatively small size of this data set, these cross validation findings aren't robust. Changing the randomization seed will cause models with different numbers of nonzero coefficients to have the lowest deviance, including models with no nonzero coefficients. In fact, we found that a model with no nonzero coefficients was returns the majority of the time, suggesting that there isn't a high signal between the covariates and the outcome. However, for the purpose of this example, we chose a randomization seed that would return a model with nonzero coefficients. 
+Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we ran cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance (shown in red). The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the "best" model for these data has no nonzero coefficients, which suggests that there isn't a very strong relationship between the features and the outcome, especially given the small sample size and class imbalance. However, Figure 1 shows that a model with seven nonzero coefficients had a deviance within one standard error of the "best" model's deviance. Therefore, we will choose $\lambda_0 = exp(-4.2)$ when fitting the full model. 
+
 
 ```{r, out.width="75%", fig.align = 'center', warning = FALSE}
 
@@ -95,7 +84,7 @@ y <- tb_mat[,ncol(tb_mat)]
 # get folds
 folds <- stratify_folds(y, nfolds = 5, seed = 1)
 
-cv_results <- cv_risk_mod(X, y, foldids = folds, a = -5, b = 5, seed = 1)
+cv_results <- cv_risk_mod(X, y, foldids = folds, a = -10, b = 10, nlambda = 25)
 
 plot(cv_results, lambda_text = FALSE) + 
   labs(title = "Figure 1. Cross Validation Results")
@@ -103,39 +92,38 @@ plot(cv_results, lambda_text = FALSE) +
 
 ```
 
-The score card for the model selected by cross-validation is presented in Table 2. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 2 were 1, 2, 4, 2, 5, 0, 5, and 0, respectively, their total score would be $1(-4) + 2(1) + 4(-1) + 2(1) + 5(1) + 0(-3) + 5(-1) + 0(5) = -4$. Table 3 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 47%. 
+The score card for the model with $\lambda_0 = exp(-4.2)$ is presented in Table 1. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 1 were 1, 1, 1, 1, 5, 3, and 4, respectively, their total score would be $1(10) + 1(3) + 1(-4) + 1(6) + 5(-1) + 3(-2) + 4(-2)  = -4$. Table 2 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 16%. 
 
 
 ```{r, warning = FALSE}
-lambda0 <- cv_results$results$lambda0[which(cv_results$results$nonzero == 4)]
+lambda0 <- exp(-4.2)
 
-mod <- risk_mod(X, y, lambda0 = lambda0, a = -5, b = 5)
+mod <- risk_mod(X, y, lambda0 = lambda0, a = -10, b = 10)
 
 ```
 
 ```{r}
 
-data.frame(mod$model_card, row.names = c("Lives with Mom (0/1)", 
+data.frame(mod$model_card, row.names = c("Lives with Single Dad (0/1)", 
                     "Pills Value (1-5)",
-                    "Accompanied by Family (1-5)",
-                    "Family Dislikes Friends (1-5)",
-                    "Feels Ashamed in Health Center (1-5)",
                     "Has Never Had Covid (0/1)",
+                    "In-Person DOT Only (0/1)",
+                    "Median Family Support Score (1-5)",
                     "Median Motivation Score (1-5)",
-                    "Treatment >6 months (0/1)")) %>%
+                    "Median TB Knowledge Score (1-5)")) %>%
   
-  kable(format = "latex", caption = "Score Card" , 
+  kable(caption = "Score Card" , 
                   booktabs = TRUE, linesep = "")  #%>% 
   #kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 10)
 
-score_range <- seq(-14, 18, 2)
+score_range <- seq(-16, 25, 2)
 
 data.frame(Score = as.character(score_range), 
            Risk = as.character(round(get_risk(mod, score_range), 2))) %>%
-  t() %>%
+ # t() %>%
 
-  kable(align = "c", format = "latex", caption = "Score-Risk Map" , 
-                  booktabs = TRUE)#  %>% 
+  kable(caption = "Score-Risk Map" , 
+                 booktabs = TRUE)#  %>% 
   #kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 8) %>%
   #row_spec(row = 1, hline_after = TRUE)
 
@@ -152,7 +140,7 @@ predict_df <- data.frame(score = predict(mod, type = "score"),
 
 ggplot() + 
   geom_point(data = predict_df, aes(x = score, y = response), size = 1) +
-  geom_function(data = data.frame(x = seq(-5,15)), aes(x), 
+  geom_function(data = data.frame(x = seq(-20,25)), aes(x), 
                 fun = function(x) get_risk(mod, x)) + 
   labs(x = "Score", y = "Risk", title = "Figure 2. Risk Score Model") +
   #scale_x_continuous(breaks = seq(-60, 50, 10)) + 
@@ -178,7 +166,7 @@ Figure 3 plots the distribution of scores by adherence outcome. We can see that 
 ```{r, out.width = "80%", fig.align='center', message = FALSE}
 # Figure 3
 ggplot() + 
-  geom_histogram(aes(x = predict_df$score, fill = tb_df$adherence_outcome),
+  geom_histogram(aes(x = predict_df$score, fill = factor(tb_df$adherence_outcome)),
                  alpha = 0.8, color = "white") + 
   labs(x = "Score", y = "Count", fill = "", 
        title = "Figure 3. Distribution of Scores by Outcome") + 
@@ -186,7 +174,7 @@ ggplot() +
   theme_bw() + 
   theme(legend.position = "bottom")
 ```
-We can also visualize the relationship between score and probability of adherence as in Figure 4. The grey points indicate the observed probability of adherence for each observed score. The orange line indicates the predicted probability of adherence associated with each score. We can see that this line tends to overestimate the probability with scores less than -10 and tends to underestimate the probability with scores greater than 3. We also observed an outlier with a score greater than 5 (predicted non-adherent) who did adhere to their medication. 
+We can also visualize the relationship between score and probability of adherence as in Figure 4. The grey points indicate the observed probability of adherence for each observed score. The orange line indicates the predicted probability of adherence associated with each score. We can see that this line tends to overestimate the probability of non-adherence. 
 
 ```{r, out.width = "80%", fig.align='center'}
 # Figure 4
@@ -212,7 +200,7 @@ ggplot() +
 
 ```
 
-We compared the performance of our risk score model to logistic regression, lasso regression, and rounded logistic regression. The coefficients for each of these models are reported in Table 4. As expected, the logistic regression model assigns a non-zero coefficient value to each covariate, while the lasso model shrinks many coefficients to zero. In fact, the lasso model only selected one covariate: `tx_mos_cat> 6 mos` (an indicator for treatment longer than 6 months). 
+We compared the performance of our risk score model to logistic regression, lasso regression, and rounded logistic regression. The coefficients for each of these models are reported in Table 3. As expected, the logistic regression model assigns a non-zero coefficient value to each covariate, while the lasso model shrinks many coefficients to zero. 
 
 ```{r, include = FALSE}
 
@@ -221,20 +209,20 @@ coef_vals <- matrix(0, ncol=4, nrow=ncol(X)-1)
 # risk model prediction
 coef_vals[, 1] <- coef(mod)[-1]
 risk_probs <- predict_df$response
-risk_pred <- as.factor(ifelse(risk_probs < 0.5, FALSE, TRUE))
+risk_pred <- as.factor(ifelse(risk_probs < 0.5, 0, 1))
 
 # glm prediction
 glm_mod <- glm(y~X-1, family = "binomial")
 coef_vals[, 2] <- coef(glm_mod)[-1]
 glm_probs<- predict(glm_mod, type="response")
-glm_pred <- as.factor(ifelse(glm_probs < 0.5, FALSE, TRUE))
+glm_pred <- as.factor(ifelse(glm_probs < 0.5, 0, 1))
 
 # lasso prediction
 lasso_res <- cv.glmnet(x=X[,-1], y=y, alpha=1)
 lasso_mod <- glmnet(x=X[,-1], y=y, lambda=lasso_res$lambda.min, alpha=1)
 coef_vals[,3] <- coef(lasso_mod)[-1]
 lasso_probs <- as.vector(predict(lasso_mod, newx=X[,-1]))
-lasso_pred <- as.factor(ifelse(lasso_probs < 0.5, FALSE, TRUE))
+lasso_pred <- as.factor(ifelse(lasso_probs < 0.5, 0, 1))
 
 # rounded logistic
 coef_vals[,4] <- round(coef_vals[,2] / abs(median(coef_vals[,2])),0)
@@ -242,15 +230,8 @@ x_vars <- tb_mat[,-c(1,ncol(tb_mat))]
 round_score <- x_vars %*% coef_vals[,4]
 mod_round <- glm(tb_mat[,ncol(tb_mat)] ~ round_score, family = "binomial")
 round_probs <- predict(mod_round, type="response")
-round_pred <- as.factor(ifelse(round_probs < 0.5, FALSE, TRUE))
+round_pred <- as.factor(ifelse(round_probs < 0.5, 0, 1))
 
-
-
-# confusion matrices
-confusionMatrix(factor(tb_df$adherence_outcome), risk_pred)
-confusionMatrix(factor(tb_df$adherence_outcome), glm_pred)
-confusionMatrix(factor(tb_df$adherence_outcome), lasso_pred)
-confusionMatrix(factor(tb_df$adherence_outcome), round_pred)
 
 # discrimination
 risk_roc <- roc(factor(tb_df$adherence_outcome), risk_probs)
@@ -261,9 +242,8 @@ round_roc <- roc(factor(tb_df$adherence_outcome), round_probs)
 
 ```
 
-Performance metrics for these models are reported in Table 5. Overall, we observed that variable selection reduced the performance of the models, as the logistic and rounded regression models had AUC values above 0.75, while the risk score and lasso models had AUC values of 0.69 and 0.63. However, these metrics were evaluated using the training data, where the logistic and rounded logistic models were likely highly overfit. Rerunning these models on a validation data set would help estimate their true performance. 
+Performance metrics for these models are reported in Table 4. Overall, we observed that variable selection reduced the performance of the models, as the logistic and rounded regression models had AUC values above 0.97, while the risk score and lasso models had AUC values of 0.831 and 0.819. However, these metrics were evaluated using the training data, where the logistic and rounded logistic models were likely highly overfit. Rerunning these models on a validation data set would help estimate their true performance. 
 
-We do observe that our risk score model had a higher AUC than the lasso model. Although the lasso model had higher specificity, it had much lower sensitivity than our model. 
 
 ```{r}
 data.frame(coef_vals, 
@@ -291,11 +271,13 @@ rbind(coords(risk_roc, "best"), coords(glm_roc, "best"),
                          #   latex_options = c("repeat_header", "HOLD_position"))
 ```
 
+For our risk score model, a threshold of 6.7% risk resulted in the optimal performance. This probability corresponds to a score of -8.4. 
+
+
+
 # Conclusion
 
-Although our risk score algorithm usually selected models with no nonzero coefficients, we were able to set the randomization seed to produce a model that could be used as an example. The fact that both our algorithm and the lasso algorithm tended to choose no covariates suggest that these variables do not have a strong relationship to the adherence outcome or there isn't a high enough sample size to detect this relationship. 
-
-Despite these issues, our example model output made sense intuitively. It makes sense that a patient living with their mom, being accompanied by family to the health clinic, and having high motivation would increase the chance of adherence. Likewise, it makes sense that having more pills to take, having a family who dislikes their friends, feeling ashamed at the clinic, and having a longer treatment would increase the risk of non-adherence. Although the performance of this model was fairly low (AUC = 0.69), it may still help with identifying which factors are the most important in predicting non-adherence. 
+Despite a small sample size with only 17 non-adherent participants, our example model output made sense intuitively. Our model identified living with a single dad, having more pills to take, and having to take the medication in-person at a clinic as factors increasing the risk of non-adherence. Having never had COVID, higher family support, higher motivation, and higher knowledge of TB decreased the risk of non-adherence. Although the performance of this model should be validated with new data, it may still help with identifying which factors are the most important in predicting non-adherence. 
 
 
 \pagebreak
@@ -356,7 +338,7 @@ grid.arrange(p3, p4, p5, p6, p7, p8, ncol = 2)
 
 ### Table A1. Processed Variable Summary
 
-```{r}
+```{r, message = FALSE}
 tbl_summary(tb_df)#%>%
    #as_kable_extra(booktabs = TRUE, 
                 # longtable = TRUE) #%>%
@@ -366,7 +348,7 @@ tbl_summary(tb_df)#%>%
 ```
 
 
-```{r, eval = FALSE}
+```{r, eval = FALSE, message = FALSE}
 
 
 # load risk model files
