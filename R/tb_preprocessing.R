@@ -3,7 +3,7 @@ suppressMessages(library(tidyverse))
 tb_preprocessing <- function(tb_df) {
   
   # define binary outcome
-  tb_df$adherence_outcome <- ifelse(tb_df$PCTadherence < 90, 1, 0)
+  tb_df$adherence_outcome <- ifelse(tb_df$PCTadherence_sensi < 100, 1, 0)
   
   # drop subsequent regimens
   tb_df <- tb_df %>%
