@@ -57,7 +57,7 @@ The categorical variables `ram` and `regular_drug` were dropped because they eac
 
 After processing, the dataset contained 32 covariates (listed in the Appendix). We excluded 37 patients with missing covariate data, leaving us with 212 observations. 
 
-In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence (`PCTadherence`), which is a continuous variable that measures the percentage of doses taken on time. To make this outcome binary, we define a cutoff of 90% above which we'll consider the patient "adherent". We observe a high level of class imbalance using this cutoff, with only 8.0% of participants classified as "non-adherent" (n = 17) and 92.0% of participants classified as "adherent" (n = 195). 
+In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence, which is a continuous variable that measures the percentage of doses taken on time. Although a 90% cutoff would align with established TB research, our dataset includes only 17 non-adherent participants without missing data. To reduce class imbalance, we defined a `PCTadherence_sensi` cutoff of 90% above which we considered the patient "adherent". Using this cutoff, we observe 86 participants classified as "non-adherent" (41%) and 124 participants classified as "adherent" (59%). 
 
 
 
@@ -72,7 +72,7 @@ tb_mat <- tb_as_matrix(tb_df)
 
 # Model Fitting 
 
-Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we ran cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance (shown in red). The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the "best" model for these data has no nonzero coefficients, which suggests that there isn't a very strong relationship between the features and the outcome, especially given the small sample size and class imbalance. However, Figure 1 shows that a model with seven nonzero coefficients had a deviance within one standard error of the "best" model's deviance. Therefore, we will choose $\lambda_0 = exp(-4.2)$ when fitting the full model. 
+Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we ran cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance (shown in red). The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the "best" model for these data has five nonzero coefficients and uses a $\lambda_0$ value of $exp(-4.7)$.
 
 
 ```{r, out.width="75%", fig.align = 'center', warning = FALSE}
@@ -92,11 +92,11 @@ plot(cv_results, lambda_text = FALSE) +
 
 ```
 
-The score card for the model with $\lambda_0 = exp(-4.2)$ is presented in Table 1. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 1 were 1, 1, 1, 1, 5, 3, and 4, respectively, their total score would be $1(10) + 1(3) + 1(-4) + 1(6) + 5(-1) + 3(-2) + 4(-2)  = -4$. Table 2 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 16%. 
+The score card for the model with $\lambda_0 = exp(-4.7)$ is presented in Table 1. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 1 were 1, 1, 1, 1, 5, 3, and 4, respectively, their total score would be $1(10) + 1(3) + 1(-4) + 1(6) + 5(-1) + 3(-2) + 4(-2)  = -4$. Table 2 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 16%. 
 
 
 ```{r, warning = FALSE}
-lambda0 <- exp(-4.2)
+lambda0 <- exp(-4.7)
 
 mod <- risk_mod(X, y, lambda0 = lambda0, a = -10, b = 10)
 
@@ -104,19 +104,17 @@ mod <- risk_mod(X, y, lambda0 = lambda0, a = -10, b = 10)
 
 ```{r}
 
-data.frame(mod$model_card, row.names = c("Lives with Single Dad (0/1)", 
-                    "Pills Value (1-5)",
+data.frame(mod$model_card, row.names = c("Daily Cont (0/1)", 
                     "Has Never Had Covid (0/1)",
                     "In-Person DOT Only (0/1)",
-                    "Median Family Support Score (1-5)",
-                    "Median Motivation Score (1-5)",
-                    "Median TB Knowledge Score (1-5)")) %>%
+                    "In-Person DOT and Family Supervision (0/1)",
+                    "Total Stigma Score >30 (0/1)")) %>%
   
   kable(caption = "Score Card" , 
                   booktabs = TRUE, linesep = "")  #%>% 
   #kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 10)
 
-score_range <- seq(-16, 25, 2)
+score_range <- seq(-6, 8)
 
 data.frame(Score = as.character(score_range), 
            Risk = as.character(round(get_risk(mod, score_range), 2))) %>%
@@ -140,7 +138,7 @@ predict_df <- data.frame(score = predict(mod, type = "score"),
 
 ggplot() + 
   geom_point(data = predict_df, aes(x = score, y = response), size = 1) +
-  geom_function(data = data.frame(x = seq(-20,25)), aes(x), 
+  geom_function(data = data.frame(x = seq(-8,10)), aes(x), 
                 fun = function(x) get_risk(mod, x)) + 
   labs(x = "Score", y = "Risk", title = "Figure 2. Risk Score Model") +
   #scale_x_continuous(breaks = seq(-60, 50, 10)) + 
@@ -271,13 +269,13 @@ rbind(coords(risk_roc, "best"), coords(glm_roc, "best"),
                          #   latex_options = c("repeat_header", "HOLD_position"))
 ```
 
-For our risk score model, a threshold of 6.7% risk resulted in the optimal performance. This probability corresponds to a score of -8.4. 
+For our risk score model, a threshold of 32.3% risk resulted in the optimal performance. This probability corresponds to a score of between -1 and 0. 
 
 
 
 # Conclusion
 
-Despite a small sample size with only 17 non-adherent participants, our example model output made sense intuitively. Our model identified living with a single dad, having more pills to take, and having to take the medication in-person at a clinic as factors increasing the risk of non-adherence. Having never had COVID, higher family support, higher motivation, and higher knowledge of TB decreased the risk of non-adherence. Although the performance of this model should be validated with new data, it may still help with identifying which factors are the most important in predicting non-adherence. 
+Despite a relatively small sample size, our example model output made sense intuitively. Our model identified higher stigma and having to take the medication in-person at a clinic as factors increasing the risk of non-adherence. Having never had COVID and having family supervision of treatment decreased the risk of non-adherence. Although the performance of this model should be validated with new data, it may still help with identifying which factors are the most important in predicting non-adherence. 
 
 
 \pagebreak
