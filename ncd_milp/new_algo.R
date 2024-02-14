@@ -1,15 +1,41 @@
+library(pROC)
 ######## for s in test set that is not present in the previously constructed score board from train ######
 ## 2024.1.29: write out the body of algorithm with an example tested out and have it written as a generic function
 ## next step: write experiments to test on different datasets
 
-#df <- sim_500_5_2_10_1_10_data
+#df <- sim_500_5_1_0_1_1_data
 #X <- as.matrix(df[,-1])
 
 
 #y <- as.matrix(df[,1],ncol=1)
 
 #debug(risk_mod_new_alg)
-#w <- risk_mod_new_alg(X,y,a=-2,b=2)
+#w <- risk_mod_new_alg(X,y,a=-10,b=10)
+
+# LR and ncd comparison 
+# cut off is 0.5
+
+
+#' Objective function for NLL+penalty
+#' 
+#' Calculates the objective function for gamma, beta (NLL+penalty)
+#' @param p input matrix of probabilities calculated from tentative score board 
+#' @param y numeric vector for the response variable (binomial)
+
+#' @param lambda0 penalty coefficient for L0 term (default 0)
+#' @return numeric objective function value
+obj_fcn <- function(p, y, lambda0=0) {
+  
+  # Calculate partial derivative for NLL
+  #v <- gamma * (X %*% beta)
+  #v <- clip_exp_vals(v) # avoids numeric errors
+  nll_fcn <- -sum( log(p*y - (1-p)*(1-y)), na.rm = T)
+  
+  # Penalty term for lambda0*||beta||_0 
+  #pen_fcn <- lambda0*sum(beta[-1] != 0) 
+  return (nll_fcn)
+}
+
 
 #' Risk Model Estimation with new algo
 #' 
@@ -22,11 +48,7 @@
 #' @return optimal beta (numeric vector) and corresponding
 #' score board with its risk
 
-
-# add iteration; scores not in unique should be 
-# train 
-# record errors and seed for which it is producing 
-# like initial errors 
+# auc
 
 
 risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol= 1e-5,weights=NULL){
@@ -88,19 +110,16 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
       # convert score to be probs
       y_pred_test <- sapply(s, function(s) return(v_list[,2][v_list[,1]==s]))
       y_pred_test <- unlist(y_pred_test)
-      # convert probs to be class
-      #set.seed(1000)
-      y_pred_test <- rbinom(length(y_pred_test),1,y_pred_test)
-      y_test <- as.numeric(as.matrix(y))
       
-      # get confusion matrix
-      mat <- get_metrics(y=y_test,y_pred = y_pred_test)
-      # update error for the current evaluation of beta[p]
-      beta_result[,2][beta_result[,1]==b_t] <- mat$acc
+      # get objective functions
+      obj <- obj_fcn(y_pred_test,y)
+      
+      # update obj for the current evaluation of beta[p]
+      beta_result[,2][beta_result[,1]==b_t] <- obj
     }
     
     # find the optimal beta value for beta[p] and update result list
-    beta[j] <- beta_result[,1][which.max(beta_result[,2])]
+    beta[j] <- beta_result[,1][which.min(beta_result[,2])]
     }
     
     # Check if change in beta is within tolerance to converge
@@ -132,7 +151,7 @@ risk_mod_new_alg <- function(X, y, a = -10, b = 10,beta = NULL,max_iters=100,tol
 # <- risk_mod_new_alg(X,y,a=-10,b=10)
 
 # Get matrix function
-get_metrics <- function(y,y_pred){
+get_metrics <- function(y,p){
   #' Get metrics from beta and gamma
   #' 
   #' Calculates deviance, accuracy, sensitivity, and specificity
@@ -142,12 +161,13 @@ get_metrics <- function(y,y_pred){
   
   
   test_y <- y
-  pred <- y_pred
   
-  #roc_obj <- roc(test_y,p)
   
-  #auc <- auc(roc_obj)[1]
+  roc_obj <- roc(test_y,p)
+  auc <- auc(roc_obj)[1]
+  optimal_cutoff <- coords(roc_obj, "best", ret = "threshold")
   
+  pred <- ifelse(p>=optimal_cutoff[1,], 1, 0)
   # Confusion matrix
   tp <- sum(pred == 1 & test_y == 1)
   tn <- sum(pred == 0 & test_y == 0)
@@ -163,6 +183,6 @@ get_metrics <- function(y,y_pred){
   f1 <- 2*ppv*sens / (ppv+sens)
   
   
-  return(list(acc=acc, sens=sens, spec=spec, ppv=ppv, npv=npv, f1=f1))
+  return(list(acc=acc, sens=sens, spec=spec, ppv=ppv, npv=npv, f1=f1, auc=auc))
 }
 

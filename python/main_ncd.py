@@ -283,9 +283,9 @@ def run_experiments(my_path):
 
 
 
-if __name__ == "__main__":
-    run_experiments(sys.argv[1])
+#if __name__ == "__main__":
+#    run_experiments(sys.argv[1])
 
 
 
-run_experiments('/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/simdat/')
+run_experiments('/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/')

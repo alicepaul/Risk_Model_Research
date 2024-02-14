@@ -63,10 +63,10 @@ run_experiments <- function(my_path){
     results <- rbind(results, file_row)
     
   }
-  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/", "ncd_cv_R_newdat_min.csv"), row.names=FALSE)
+  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/", "ncd_cv0_R_loop.csv"), row.names=FALSE)
 }
 
-run_experiments("/Users/oscar/Documents/GitHub/Risk_Model_Research/sim_dat_new/")
+run_experiments("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/")
 
 t1.1 <- Sys.time()
 run_experiments("/Users/oscar/Documents/GitHub/Risk_Model_Research/sim_dat_new/")
