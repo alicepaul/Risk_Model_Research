@@ -38,7 +38,7 @@ raw_data <- read.csv("../data/Peru_TB_data.csv")
 
 This study included 249 individual participants. Since some participants had multiple regimens, the raw data contained 266 regimens in total. For this analysis we considered only the first regimen for each participant. After removing the subsequent regimens, the data contained one row for each participant (n = 249).
 
-The raw data included 64 potential covariates. We dropped `PTID2`, `hunger_freq`, `health_ctr`, and `post_tb_pt_work` because they were either not listed in the data dictionary or were listed with a note that they should not be included in the model. We summarized the family support, evaluation of health services, motivation, and TB disinformation variables by taking the median value for each category. 
+The raw data included 64 potential covariates. We dropped `PTID2`, `hunger_freq`, `health_ctr`, `daily_cont`, and `post_tb_pt_work` because they were either not listed in the data dictionary or were listed with a note that they should not be included in the model. We summarized the family support, evaluation of health services, motivation, and TB disinformation variables by taking the median value for each category. 
 
 The data dictionary noted that `pills` variable was coded as 1 for 0-3 pills, 2 for 4-6 pills, 3 for 7-9 pills, 4 for 10-11 pills, and 5 for 12+ pills. However, the values in the data were 0.25, 0.50, 0.75, and 1.00. We converted this variable to the scale in the data dictionary by multiplying each value by 4. Note that this results in no values of 5 in the cleaned data (indicating no subjects taking 12+ pills). The `adr_freq` variable also needed to be multiplied by 4 for the same reason. In this variable's case, all values listed in the data dictionary (0, 1, 2, 3, and 4) are present in the transformed data. 
 
@@ -57,7 +57,7 @@ The categorical variables `ram` and `regular_drug` were dropped because they eac
 
 After processing, the dataset contained 32 covariates (listed in the Appendix). We excluded 37 patients with missing covariate data, leaving us with 212 observations. 
 
-In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence, which is a continuous variable that measures the percentage of doses taken on time. Although a 90% cutoff would align with established TB research, our dataset includes only 17 non-adherent participants without missing data. To reduce class imbalance, we defined a `PCTadherence_sensi` cutoff of 90% above which we considered the patient "adherent". Using this cutoff, we observe 86 participants classified as "non-adherent" (41%) and 124 participants classified as "adherent" (59%). 
+In order to create a risk score model, we must have a binary outcome with integer (or near-integer) covariates. Here, we are interested in medication adherence, which is a continuous variable that measures the percentage of doses taken on time. Although a 90% cutoff would align with established TB research, our dataset includes only 17 non-adherent participants without missing data. To reduce class imbalance, we defined a patient as "adherent" only if their `PCTadherence_sensi` value was 100%. Using this cutoff, we observe 86 participants classified as "non-adherent" (41%) and 124 participants classified as "adherent" (59%). 
 
 
 
@@ -72,7 +72,7 @@ tb_mat <- tb_as_matrix(tb_df)
 
 # Model Fitting 
 
-Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we ran cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance (shown in red). The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the "best" model for these data has five nonzero coefficients and uses a $\lambda_0$ value of $exp(-4.7)$.
+Out model-fitting algorithm uses a parameter $\lambda_0$ that penalizes nonzero coefficients. In other words, a higher value of $\lambda_0$ will result in fewer covariates being included in the risk score model. To determine the best value for $\lambda_0$, we ran cross-validation. Figure 1 plots the mean model deviance for a range of potential $\lambda_0$ values. The best fitting model will have the lowest deviance (shown in red). The numbers at the top of the plot show the number of nonzero coefficients in the model fit with each value of $\lambda_0$. We can see that the "best" model for these data has only one nonzero coefficient, which suggests that there isn't a very strong relationship between the features and the outcome. However, Figure 1 shows that a model with three nonzero coefficients had a deviance within one standard error of the "best" model's deviance. Therefore, we will choose $\lambda_0 = exp(-4.7)$ when fitting the full model. 
 
 
 ```{r, out.width="75%", fig.align = 'center', warning = FALSE}
@@ -82,7 +82,7 @@ y <- tb_mat[,ncol(tb_mat)]
 
 # CV
 # get folds
-folds <- stratify_folds(y, nfolds = 5, seed = 1)
+folds <- stratify_folds(y, nfolds = 5, seed = 123)
 
 cv_results <- cv_risk_mod(X, y, foldids = folds, a = -10, b = 10, nlambda = 25)
 
@@ -92,7 +92,7 @@ plot(cv_results, lambda_text = FALSE) +
 
 ```
 
-The score card for the model with $\lambda_0 = exp(-4.7)$ is presented in Table 1. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 1 were 1, 1, 1, 1, 5, 3, and 4, respectively, their total score would be $1(10) + 1(3) + 1(-4) + 1(6) + 5(-1) + 3(-2) + 4(-2)  = -4$. Table 2 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 16%. 
+The score card for the model with $\lambda_0 = exp(-4.7)$ is presented in Table 1. A patient's total score can be calculated by multiplying each variable's response by the number of points shown on the right and then adding the points together. For example, if a patient's responses to the variables listed in Table 1 were 0, 1, and 1, respectively, their total score would be $0(-2) + 1(1) + 1(2) = 3$. Table 2 can then be used to map this score to its associated risk of non-adherence. For this example patient, their risk of non-adherence would be 77%. 
 
 
 ```{r, warning = FALSE}
@@ -104,17 +104,15 @@ mod <- risk_mod(X, y, lambda0 = lambda0, a = -10, b = 10)
 
 ```{r}
 
-data.frame(mod$model_card, row.names = c("Daily Cont (0/1)", 
-                    "Has Never Had Covid (0/1)",
+data.frame(mod$model_card, row.names = c("In-Person DOT and Family Supervision (0/1)",
                     "In-Person DOT Only (0/1)",
-                    "In-Person DOT and Family Supervision (0/1)",
                     "Total Stigma Score >30 (0/1)")) %>%
   
   kable(caption = "Score Card" , 
                   booktabs = TRUE, linesep = "")  #%>% 
   #kableExtra::kable_styling(latex_options = c("HOLD_position"), font_size = 10)
 
-score_range <- seq(-6, 8)
+score_range <- seq(-2, 3)
 
 data.frame(Score = as.character(score_range), 
            Risk = as.character(round(get_risk(mod, score_range), 2))) %>%
@@ -240,7 +238,7 @@ round_roc <- roc(factor(tb_df$adherence_outcome), round_probs)
 
 ```
 
-Performance metrics for these models are reported in Table 4. Overall, we observed that variable selection reduced the performance of the models, as the logistic and rounded regression models had AUC values above 0.97, while the risk score and lasso models had AUC values of 0.831 and 0.819. However, these metrics were evaluated using the training data, where the logistic and rounded logistic models were likely highly overfit. Rerunning these models on a validation data set would help estimate their true performance. 
+Performance metrics for these models are reported in Table 4. Overall, we observed that variable selection reduced the performance of the models, as the logistic and rounded regression models had AUC values above 0.79, while the risk score and lasso models had AUC values of 0.691 and 0.721. However, these metrics were evaluated using the training data, where the logistic and rounded logistic models were likely highly overfit. Rerunning these models on a validation data set would help estimate their true performance. 
 
 
 ```{r}
@@ -269,7 +267,7 @@ rbind(coords(risk_roc, "best"), coords(glm_roc, "best"),
                          #   latex_options = c("repeat_header", "HOLD_position"))
 ```
 
-For our risk score model, a threshold of 32.3% risk resulted in the optimal performance. This probability corresponds to a score of between -1 and 0. 
+For our risk score model, a threshold of 37.6% risk resulted in the optimal performance. This probability corresponds to a score of between 0 and 1. 
 
 
 

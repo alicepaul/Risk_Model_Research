@@ -17,7 +17,8 @@ tb_preprocessing <- function(tb_df) {
                                PCTadherence_sensi, 
                                PTID2, # study ID
                                hunger_freq, # "not including in the model"
-                               health_ctr, # 71 health centers 
+                               health_ctr, # 71 health centers ,
+                               daily_cont, # not in dictionary
                                post_tb_pt_work)) #  not in dictionary 
   
   # family support - simplify by taking median response to get almost integer value
