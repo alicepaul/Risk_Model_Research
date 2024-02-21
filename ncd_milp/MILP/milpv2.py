@@ -70,6 +70,9 @@ def MILP_V2(X,y,n,p,M,SK_pool,PI):
     # Add the partial solution to the model
     model.addSol(partial_solution)
 
+    # Set time limit 
+    model.setRealParam('limits/time', 3500)
+
     model.data = beta, s, z_ik, z_kl, p_il
     return model
 

@@ -1,4 +1,5 @@
 source('new_algo.R')
+library(tidyverse)
 
 run_experiments <- function(my_path){
   #' Risk model algorithm experiments
@@ -22,11 +23,7 @@ run_experiments <- function(my_path){
     
     # Print for ease
     print(paste0(my_path,f))
-    # Get the current seed number
-    # Get the current state of the RNG
-    #.Random.seed <- seed.1000_5_1_0_3_9
-    
-    
+
     # Read in data
     df <- read.csv(paste0(my_path,f))
     X <- as.matrix(df[,-1])
@@ -66,24 +63,44 @@ run_experiments <- function(my_path){
     }
     
     score_range <- seq(sum(min_pts), sum(max_pts)) 
-    score_range <- matrix(c(score_range,rep(NA,times=length(score_range))),ncol=2)
-    # match possible score with existing score board 
-    score_range[match(mod[[2]][, 1], score_range[, 1]), 2] <- mod[[2]][, 2] 
+    # Create a modified score board
+    score_range <- matrix(c(score_range,rep(NA,times=4 * length(score_range))),ncol=5)
+    # Get # of obs from testing y with corresponding scores
+    score_y <- X_train %*% mod[[1]] 
+    score_y <- as.data.frame(table(score_y))
     
-    # convert missing probs as a weighted average
+    # match possible score with existing score board 
+    score_range[match(score_y[, 1], score_range[, 1]), 2] <- score_y[, 2] 
+    score_range[match(mod[[2]][, 1], score_range[, 1]), 3] <- mod[[2]][, 2] 
+    
+    # Weighted version of score board 
     for (i in 1:nrow(score_range)) {
-      if(is.na(score_range[i,2])) {
-        non_na <- which(!is.na(score_range[,2]))
-        if(score_range[i,1]==0) {
-          # currently set as 0.5
-          score_range[i,2] <- 0.5
-        } else {
-          score_range[i,2] <- abs(( (1/length(non_na)) * sum(score_range[non_na,1] * score_range[non_na,2]) ) / score_range[i,1])
-        }
-        
+      if(is.na(score_range[i,2]) | score_range[i,2] < 5) {
+        #construct proportion weights
+        score_range[,4] <- 1/sapply(score_range[,1], function(x) (x-score_range[i,1])^2)
+        score_range[,4][is.infinite(score_range[,4])] <- 0
+        score_range[,5] <- score_range[,3] * score_range[,4]
+        score_range[i,3] <- sum(score_range[,5],na.rm = T) / sum(score_range[,4],na.rm = T)
+        #browser()
       }
     }
-    score_board <- score_range
+    
+    
+    
+    # convert missing probs as a weighted average
+    #for (i in 1:nrow(score_range)) {
+    #  if(is.na(score_range[i,2])) {
+    #    non_na <- which(!is.na(score_range[,2]))
+    #    if(score_range[i,1]==0) {
+          # currently set as 0.5
+    #      score_range[i,2] <- 0.5
+    #    } else {
+    #      score_range[i,2] <- abs(( (1/length(non_na)) * sum(score_range[non_na,1] * score_range[non_na,2]) ) / score_range[i,1])
+    #    }
+                                                                                                         
+    #  }
+    #}
+    score_board <- score_range[,c(1,3)]
     # replace missing probabilities with
     
     # Get evaluation metrics
@@ -104,7 +121,7 @@ run_experiments <- function(my_path){
     
     
   }
-  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/", "testing_2024.2.11.csv"), row.names=FALSE)
+  write.csv(results, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_newalg/", "testing_2024.2.19.csv"), row.names=FALSE)
   
 }
 

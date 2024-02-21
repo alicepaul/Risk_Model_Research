@@ -12,12 +12,15 @@ from statistics import median
 from sklearn.linear_model import LogisticRegression
 
 
-column_names = "data, n, p, method, acc, sens, spec, non-zeros, time \n"
+column_names = "data, n, p, method, auc, acc, sens, spec, non-zeros, time \n"
 
 def get_metrics(X_test,y_test,beta_values,score_board,PI):
 
     # Convert test X into S 
-    s_val = [row[0] * beta_values[0] + row[1] * beta_values[1] for row in X_test]
+    X_test = np.array(X_test)
+    beta_values = np.array(list(beta_values.values()))
+    s_val = np.dot(X_test, beta_values)
+
 
     # convert s into probs
     probs = []
@@ -51,12 +54,13 @@ def record_measures(X_test,y_test,beta_values,score_board,filename,n,p,method,ti
     measures = get_metrics(X_test,y_test,beta_values,score_board,PI)
 
     res_str = filename + "," + str(n) + "," + str(p) + "," + method + "," + str(measures[0]) + "," + str(measures[1]) + "," \
-    + str(measures[2]) + "," + str(np.count_nonzero(beta_values))+ ","+str(time) +"\n"
+    + str(measures[2]) + "," + str(measures[3]) + "," + str(np.count_nonzero(beta_values)) + ","+str(time) +"\n"
+    
     return(res_str)
 
 def process_files_and_predict(working_directory):
 
-    res_file = os.path.join(working_directory,"results_100_4.csv")
+    res_file = os.path.join(working_directory,"results_milp_v2_testing_2.20_t_limit.csv")
     res_f = open(res_file, "w")
     res_f.write(column_names)
     res_f.close()
@@ -66,7 +70,7 @@ def process_files_and_predict(working_directory):
             res = ''
             # Load and preprocess data
             df = pd.read_csv(os.path.join(working_directory, filename))
-            df = df.iloc[0:100, 0:5]  # Adjust slicing based on data structure
+            #df = df.iloc[0:20, 0:3]  # Adjust slicing based on data structure
             y = df.iloc[:, 0].values
             X = df.iloc[:, 1:].values
 
@@ -75,7 +79,7 @@ def process_files_and_predict(working_directory):
 
             # Define parameters (adjust these as needed)
             n, p = X_train.shape
-            M = 1000
+            M = 1000 # some big number to control for constraints 
             SK_pool = list(range(-5 * p, 5 * p + 1))
             PI = np.linspace(0, 1, 100)[1:-1]
 
@@ -102,7 +106,7 @@ def process_files_and_predict(working_directory):
             # Extracting keys where z_kl values are equal (or almost equal) to 1
             keys_zkl = {key: val for key, val in zkl_values.items() if val==1}
 
-            # Form score to prob board 
+            # Form score to prob board: score to an l (index of the probability vector, PI)
             score_board  = {key[0]: key[1] for key in keys_zkl.keys()}
 
             # Store results
@@ -113,6 +117,6 @@ def process_files_and_predict(working_directory):
             res_f.close()
 
 # Usage example
-working_directory = '/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_new'  # Replace with your actual directory path
+working_directory = '/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_milp'  # Replace with your actual directory path
 process_files_and_predict(working_directory)
 

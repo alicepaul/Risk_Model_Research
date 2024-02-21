@@ -10,12 +10,12 @@ from sklearn.metrics import classification_report
 from statistics import median
 
 # Load the data
-file_path = "/Users/oscar/Documents/GitHub/Risk_Model_Research/MILP/data/"
-file_name = "simulate0_10_0_4_data.csv"  # Replace with your file name
+file_path = "/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_milp/"
+file_name = "sim_50_3_2_7_1_1_data.csv"  # Replace with your file name
 df = pd.read_csv(file_path + file_name) 
 
 # Preprocessing the data
-df = df.iloc[0:20, 0:3]
+#df = df.iloc[0:20, 0:4]
 y = df.iloc[:, 0].values
 X = df.iloc[:, 1:].values
 
@@ -31,7 +31,7 @@ PI = np.linspace(0, 1, 100)[1:-1]  # Exclude 0 and 1
 # Create and solve the model
 milp_model = milp.MILP_V2(X,y,n,p,M,SK_pool,PI)
 milp_model.optimize()
-milp_model.getStatus()
+status = milp_model.getStatus()
 
 
 # Extract model data
@@ -42,8 +42,11 @@ solving_time = milp_model.getSolvingTime()
 
 # Extracting beta values
 beta_values = {j: milp_model.getVal(beta[j]) for j in range(p)}
-#s_23 = [row[0] * beta_values[0] + row[1] * beta_values[1] for row in X]
+#s_scores = [row[0] * beta_values[0] + row[1] * beta_values[1] for row in X]
 
+# Change values
+X = np.array(X)
+beta_values = np.array(list(beta_values.values()))
 np.dot(X, beta_values)
 # Extracting s values
 s_values = {i: milp_model.getVal(s[i]) for i in range(n)}
@@ -53,19 +56,23 @@ zkl_values = {(k, l): milp_model.getVal(z_kl[k, l]) for k in SK_pool for l in ra
 
 for k in SK_pool:
     for l in range(len(PI)):
-        print(f"z_kl[{k},{l}]: {zkl_values[k, l]}")
+       print(f"z_kl[{k},{l}]: {zkl_values[k, l]}")
 
 # Extracting keys where z_kl values are equal (or almost equal) to 1
 keys_zkl = {key: val for key, val in zkl_values.items() if val==1}
 new_dict = {key[0]: key[1] for key in keys_zkl.keys()}
 
-prob = []
-for val in s_23:
+keys_list = list(new_dict.keys())
+key_at_index_5 = keys_list[25]
+value = new_dict[key_at_index_5]
+
+probs = []
+for val in list(s_values.values()):
     if val in new_dict:
         score_value = new_dict[val]
-        prob.append(PI[score_value])
+        probs.append(PI[score_value])
     else:
-        prob.append(None)
+        probs.append(None)
 
 
 for key in keys_zkl.keys():
@@ -131,4 +138,4 @@ def get_metrics(y, probs):
 
 
 
-get_metrics(y,predicted_probabilities)
+get_metrics(y,probs)

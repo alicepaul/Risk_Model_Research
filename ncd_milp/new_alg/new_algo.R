@@ -1,7 +1,4 @@
 library(pROC)
-######## for s in test set that is not present in the previously constructed score board from train ######
-## 2024.1.29: write out the body of algorithm with an example tested out and have it written as a generic function
-## next step: write experiments to test on different datasets
 
 #df <- sim_500_5_1_0_1_1_data
 #X <- as.matrix(df[,-1])
