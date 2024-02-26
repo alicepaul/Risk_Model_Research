@@ -45,8 +45,7 @@ def MILP_V2(X,y,n,p,M,SK_pool,PI):
     # Objective Function
     objective = -quicksum(y[i] * np.log(PI[l]) * p_il[i, l] + (1 - y[i]) * np.log(1 - PI[l]) * p_il[i, l] for i in range(n) for l in range(len(PI)))
     model.setObjective(objective, "minimize")
-
-
+    
     # Run Logistic Regression
     ## add cord
     log_reg = LogisticRegression()
@@ -71,8 +70,9 @@ def MILP_V2(X,y,n,p,M,SK_pool,PI):
     model.addSol(partial_solution)
 
     # Set time limit 
-    model.setRealParam('limits/time', 3500)
-
+    model.setRealParam('limits/time', 3600)
     model.data = beta, s, z_ik, z_kl, p_il
     return model
+
+    
 

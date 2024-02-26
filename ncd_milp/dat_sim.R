@@ -62,7 +62,7 @@ gen_data <- function(n, p1, p2, eps, link,filename){
   df$y <- data$y
   df <- df %>%
     select(y, everything())
-  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_milp/",filename,"_data.csv"), row.names=FALSE)
+  write.csv(df, paste0("/Users/oscar/Documents/GitHub/Risk_Model_Research/ncd_milp/sim_milp_v1/",filename,"_data.csv"), row.names=FALSE)
   
   # coefficients file
   coef_df <- data.frame(names = c("Intercept",names(df)[1:(p1+p2)]),

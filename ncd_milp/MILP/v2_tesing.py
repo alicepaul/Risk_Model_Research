@@ -31,8 +31,38 @@ PI = np.linspace(0, 1, 100)[1:-1]  # Exclude 0 and 1
 # Create and solve the model
 milp_model = milp.MILP_V2(X,y,n,p,M,SK_pool,PI)
 milp_model.optimize()
-status = milp_model.getStatus()
 
+
+
+    # Step 2: Check if the problem is solved to optimality or within 1% gap
+    status = milp_model.getStatus()
+    gap = milp_model.getGap()
+
+    if status == 'optimal' or gap <= 0.01:
+        print("Solution is optimal or within 1% gap.")
+        model.data = beta, s, z_ik, z_kl, p_il
+        return model
+    else:
+    # Step 3: Warm start with the solution from the last run
+    # Get the current best solution
+        current_solution = milp_model.getBestSol()
+
+    # Reset the model if you want to change parameters or re-solve from scratch
+        milp_model.freeTransform()
+
+    # Optionally adjust the model (e.g., change parameters)
+        milp_model.setParam('limits/time', 200)  # Set a new time limit for the next run
+
+    # Add the previous solution as a starting point
+        milp_model.addSol(current_solution)
+
+    # Re-optimize the model
+        milp_model.optimize()
+
+    # Check the new solution status and gap
+        new_status = milp_model.getStatus()
+        new_gap = milp_model.getGap()
+        print(f"New status: {new_status}, New gap: {new_gap}")
 
 # Extract model data
 beta, s, z_ik, z_kl, p_il = milp_model.data
@@ -62,9 +92,6 @@ for k in SK_pool:
 keys_zkl = {key: val for key, val in zkl_values.items() if val==1}
 new_dict = {key[0]: key[1] for key in keys_zkl.keys()}
 
-keys_list = list(new_dict.keys())
-key_at_index_5 = keys_list[25]
-value = new_dict[key_at_index_5]
 
 probs = []
 for val in list(s_values.values()):
@@ -73,42 +100,6 @@ for val in list(s_values.values()):
         probs.append(PI[score_value])
     else:
         probs.append(None)
-
-
-for key in keys_zkl.keys():
-    print(f"z_kl{key}: {keys_zkl[key]}")
-
-# Extracting p_il values
-pil_values = {(i, l): milp_model.getVal(p_il[i, l]) for i in range(n) for l in range(len(PI))}
-
-# Extracting keys (i, l) where p_il values are equal (or almost equal) to 1
-keys_pil = [key for key, val in pil_values.items() if val==1]
-
-# print the filtered keys
-for key in keys_pil:
-    print(f"p_il{key}: 1")
-
-
-
-# Print the results
-print("Beta values:")
-for j in range(p):
-    print(f"beta[{j}]: {beta_values[j]}")
-
-print("\ns values:")
-for i in range(n):
-    print(f"s[{i}]: {s_values[i]}")
-
-
-
-# Evaluation
-# Identify p_il values equal to 1
-# This gives the mapping of each i to a specific l
-i_to_l_mapping = {i: l for (i, l), val in pil_values.items() if val==1}
-
-# Map each i to PI[l]
-predicted_probabilities = {i: PI[l] for i, l in i_to_l_mapping.items()}
-
 
 
 def get_metrics(y, probs):
