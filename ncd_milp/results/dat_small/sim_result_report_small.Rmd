@@ -1,9 +1,7 @@
 ---
-title: "Results Summary 2024-02-13"
+title: "sim_result_report_small"
 author: "Yu Yan"
-date: "2024-02-13"
-header-includes:
-  - \usepackage{placeins}
+date: "2024-02-27"
 output: pdf_document
 ---
 
@@ -24,9 +22,11 @@ library(writexl)
 ```
 
 
+
 ```{r}
 # new algo result
-new_alg <- testing_2024_2_11
+# running new algo on milp-type data
+new_alg <- read_csv('testing_2024.2.26_new.csv')
 # parameter columns
 new_alg <- new_alg %>% mutate(p1 = unlist(lapply(new_alg$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
@@ -48,7 +48,8 @@ new_alg <- new_alg %>% mutate(p1 = unlist(lapply(new_alg$data, function(input_st
 
 ```{r}
 # ncd result
-ncd <- ncd_cv0_R_loop
+# running cyclical coordinate descent algo on milp-type data
+ncd <- read_csv('ncd_cv0_R_loop_milpdat.csv')
 # parameter columns
 ncd <- ncd %>% mutate(p1 = unlist(lapply(ncd$data, function(input_string) {
   split_string <- unlist(strsplit(input_string, "_"))
@@ -70,7 +71,10 @@ ncd <- ncd %>% mutate(p1 = unlist(lapply(ncd$data, function(input_string) {
 
 ```{r}
 # round logistic
-logis <- results_ncd_fr_YY[results_ncd_fr_YY$method=='Round',]
+# running round logistic algo on milp-type data
+logis <- read_csv('results_ncd_fr_milp_2.26.csv')
+
+logis <- logis[logis$method=='Round',]
 indices <- match(new_alg$data,logis$data)
 logis <- logis[indices,]
 # parameter columns
@@ -92,12 +96,36 @@ logis <- logis %>% mutate(p1 = unlist(lapply(logis$data, function(input_string) 
   })))
 ```
 
+```{r}
+# milp_v2 result (time_limit = 3600s)
+# running milp_v2 on milp_type data 
+milp_v2 <- read_csv('results_milp_v2_testing_2.24_t_limit.csv')
 
+# parameter columns
+milp_v2 <- milp_v2 %>% mutate(p1 = unlist(lapply(milp_v2$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[3])
+  })), 
+                                   p2 = unlist(lapply(milp_v2$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[4])
+  })),
+                                   eps = unlist(lapply(milp_v2$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[5])
+  })),
+                                   link = unlist(lapply(milp_v2$data, function(input_string) {
+  split_string <- unlist(strsplit(input_string, "_"))
+  return(split_string[6])
+  })))
+
+```
+# Results Summary
 ```{r}
 # acc comparison
-acc_dat <- as.data.frame(cbind(new_alg$acc,ncd$acc,logis$acc,new_alg$link)) %>%
-  set_names(c('new','ncd','logis','link')) %>%
-  pivot_longer(c(new,ncd,logis), names_to = 'alg',values_to = 'acc') %>%
+acc_dat <- as.data.frame(cbind(new_alg$acc,ncd$acc,logis$acc,milp_v2$acc ,new_alg$link)) %>%
+  set_names(c('new','ncd','logis','milp_v2','link')) %>%
+  pivot_longer(c(new,ncd,logis,milp_v2), names_to = 'alg',values_to = 'acc') %>%
   mutate(acc=as.numeric(acc),alg=as.factor(alg),link=as.numeric(link)) 
 
 # display
@@ -119,9 +147,9 @@ acc_dat %>%
 
 ```{r}
 # sec vs acc
-sec_dat <- as.data.frame(cbind(new_alg$sec,ncd$sec,logis$time, new_alg$link)) %>% 
-  set_names(c('new','ncd','logis','link')) %>% 
-  pivot_longer(c(new,ncd,logis), names_to = 'alg',values_to = 'sec') %>%
+sec_dat <- as.data.frame(cbind(new_alg$sec,ncd$sec,logis$time,milp_v2$time,new_alg$link)) %>% 
+  set_names(c('new','ncd','logis','milp_v2','link')) %>% 
+  pivot_longer(c(new,ncd,logis,milp_v2), names_to = 'alg',values_to = 'sec') %>%
   mutate(sec=as.numeric(sec),alg=as.factor(alg),link=as.numeric(link)) 
 
 sec_acc_dat <- bind_cols(acc_dat,sec_dat,.name_repair = 'minimal') 
